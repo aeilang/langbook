@@ -1,0 +1,386 @@
+---
+title: 3.从echo开始
+---
+
+在 linux 中，echo 将字符串和变量输出到终端。例如，在终端中输入
+
+```sh
+echo "Hello World!"
+```
+
+输出
+
+```
+Hello World!
+```
+
+我们使用 Go 来实现这个功能
+
+### 1. 创建新项目
+
+新建一个名为`echo`文件夹，使用 vscode 打开这个文件夹，再在 vscode 中打开终端。
+
+我们需要初始化一个新项目，在终端中使用
+
+```sh
+go mod init github.com/aeilang/echo
+```
+
+`go mod init 模块名` 接收一个参数，即这个项目的模块名。`github.com`是域名，`aeilang`是我 github 的账号，`echo`是我账号下的一个仓库。
+
+你也可以使用其他的名字，例如
+
+```sh
+go mod init xxx/echo
+```
+
+但需要保证最后一个单词`echo`与所在的文件夹名字相同。
+
+在你的文件夹中，会生成一个`go.mod`文件
+
+```go title="go.mod"
+module github.com/aeilang/echo
+
+go 1.23.3
+```
+
+记录了项目模块的名字，和 go 的版本信息。
+
+推荐使用第一种方式，把`aeilang`换成你的账号名，这样你将这个项目上传 github 后，别人就可以直接使用`go get github.com/aeilang/echo`，把你的项目下载下来作为依赖。
+
+### 2. 第一个 Go 程序
+
+新建`main.go`文件，输入以下内容
+
+```go title="main.go"
+package main // 包名
+
+import "fmt" // 当前包要依赖fmt包
+
+// 创建一个名字为main的函数, main函数是程序的入口
+func main() {
+	fmt.Println("Hello World!")
+}
+```
+
+每个`.go`文件都要属于某一个包。`package main`表明，当前文件属于`main包`，`main`是一个特殊的包，表明这个包要产生可执行的文件。
+
+函数定义使用`func`关键字， 并使用大括号`{}`指定函数体的范围。`main包`里的`main函数`是一个特殊的函数，没有输入，也没有输出，是整个程序执行的入口。
+
+`fmt`是我们标准库里的一个包，用于处理格式化输入和输出，我们调用其中的`Println()`函数，把"Hello World!"打印到命令行。
+
+`Println`函数名起得很简洁，`Print`是打印的意思， `ln`会在字符串后添加换行符`\n`，即打印完后进行换行。这启示我们，我们给函数起名字时，尽量要体现该函数的功能，让人调用时看到函数名就知道该函数是做什么用的。
+
+`fmt`是 format 的简写，这启示我们，定义包名时，要尽可能简洁，因为我们调用这个包时，太长的名字会很啰嗦。
+
+我们通过两个下划线`//`来写注释，注释会被编译器忽略。注释能提高代码可读性，让别人或者 2 个月后的自己，看得懂原来的代码。
+
+我们来编译这个程序，在命令行输入
+
+```sh
+go build main.go
+```
+
+这将会在当前目录下生成名为`main`的可执行文件。如果是 windows 将会生成`main.exe`的可执行文件。
+
+你也可以简单的使用
+
+```sh
+go build
+```
+
+Go 会编译当前文件夹内的所有`.go`文件。结果是一样的。
+
+你还可以指定生成的可执行文件的名字
+
+```sh
+go build -o echo main.go
+```
+
+你还可以交叉编译，Go 可是跨平台的语言喔。
+
+1. 为 linux 构建
+
+```sh
+GOOS=linux GOARCH=amd64 go build main.go
+```
+
+2. 为 windows 构建
+
+```sh
+GOOS=windows GOARCH=amd64 go build main.go
+```
+
+3. 为 mac 构建
+
+```sh
+GOOS=darwin GOARCH=arm64 go build main.go
+```
+
+`GOOS`指定目标系统，`GOARXH`指定目标架构。为什么我们运行`go build`时 Go 知道我们的系统呢？
+
+输入以下命令
+
+```sh
+go env
+```
+
+输出
+
+```
+...
+GOARCH='amd64'
+GOOS='linux'
+...
+```
+
+我们在安装 Go 时，Go 已经设置好了这些环境变量。
+
+运行该文件
+
+```sh
+./main # linux
+./main.exe # windows
+```
+
+输出
+
+```
+Hello World!
+```
+
+我们可以使用更快捷的`go run`
+
+```sh
+go run main.go
+```
+
+Go 会帮我们自动编译成一个临时文件并运行，运行完成后临时文件就自动消失了，临时嘛！
+
+欧耶，我们完成了第一个 Go 程序！
+
+但还不够，`echo` 能接收不同的字符串，并打印在命令行。我们需要能接受命令行传入的参数。
+
+### 3. 接收命令行参数
+
+将代码更改
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+	var args []string = os.Args
+	fmt.Println(args)
+}
+```
+
+我们调用了`os`包里的`Args`函数，Go 有一个运行时(runtime), 会自动把命令行参数传给`os.Args`。
+
+
+
+<Callout title="var 语法">
+
+var 用来声明并初始化一个变量
+
+```go
+var 变量名 类型 = 值 
+var args []string = os.Args
+```
+
+</Callout>
+
+我们使用`var`关键字创建了一个名为 args 的变量，类型为`[]string` 即字符串的切片类型, 并把 os.Args 的值赋值给 args 变量。可以把`[]string` 类型理解为书架，我们可以知道书架从左到右第几书的名字是什么。
+
+回到代码，在命令行中输入以下命令进行编译：
+
+```sh
+go build main.go
+```
+
+再运行
+
+```sh
+./main # linux
+./main.exe # windows
+```
+
+输出
+
+```
+[./main]
+```
+
+`args`这个切片只有一个值，就是我们运行的命令。
+
+我们添加几个值
+
+```sh
+./main value1 value2
+```
+
+输出
+
+```
+[./main value1 value2]
+```
+
+哦，原来 args 列表存的值就是我们输入命令行的值。
+
+### 4. 打印命令行参数
+
+我们遍历`args`切片，除了第一个命令行参数不要，剩余的都打印出来。更改代码为:
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+    var args []string = os.Args // 获取命令行参数
+    var length int = len(args) // 获取args切片的长度
+    for i := 1; i < length; i++ {
+        fmt.Println(args[i])
+    }
+}
+```
+
+内置函数`len`返回切片的长度。length 是一个`int`类型，即整数类型。
+
+在 for 循环中`i := 1`使用了短声明语句，来新建变量`i`
+
+<Callout title="什么是短声明语句？">
+
+除了`var`声明， Go提供了另一种简便的写法: 短声明语句`:=`
+
+```go
+变量名 := 值
+i := 1
+```
+
+Go知道`1`类型为`int`，自动推断`i`变量也为`int`。
+
+</Callout>
+
+<Callout title="for 循环语法">
+
+```go
+for 初始化语句; 条件表达式; 后置语句 {
+    // 循环体
+}
+```
+
+- **初始化语句**：在循环开始时执行一次的语句（通常用来初始化变量）。
+
+- **条件表达式**：在每次迭代前计算，若为 `true` 则继续执行循环体，否则退出循环。
+
+- **后置语句**：每次循环结束后执行的语句（通常用来更新变量）。
+
+举个例子，我们打印 0-9
+
+```go
+for i := 0; i < 10; i++ {
+    fmt.Println(i)
+}
+```
+
+会输出
+
+```
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+
+执行顺序是这样的:
+
+![](@/public/images/for.svg)
+
+我们注意到，`for循环`初始化语句必须使用短声明语句`:=`， 而不能使用`var`声明。
+
+</Callout>
+
+#### 3.3 切片的索引
+
+args 是`string`的切片类型, `[]string` , 切片是内存里的一段连续空间。切片就像书架上的书，我们可以知道从左到右第几本书的书名。**切片的索引是从 0 开始的, 而不是1**，我们可以通过索引取出第几个`string`。例如取出第一个值:
+
+```go
+fmt.Println(args[0])
+```
+
+输出:
+
+```
+/main
+```
+
+即通过`args[索引]`来取出第几个值。
+
+Go 语言中`string`类型占内存大小是固定的，都是 16 个字节(后边会详细解析其原理)。
+
+![](@/public/images/slice.svg)
+
+for 循环中，`i := 1`从 1 开始，直接跳过了`args[0]`, 即`/main`, 我们只打印后边传入的参数。
+
+回到我们更改后的代码，编译`main.go`:
+
+```sh
+go build -o echo main.go
+```
+
+运行:
+
+```sh
+./echo hello world 		# linux
+./echo.exe hello world 	# windows
+```
+
+输出:
+
+```
+hello
+world
+```
+
+祝贺你！我们完成了`echo`的基本功能。你可以把编译完的`echo`可执行文件，分享给你的朋友，让他们也祝贺你做出了第一个命令行小工具！
+
+
+
+### 4. 最终代码
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+    var args []string = os.Args // 获取命令行参数
+    var length int = len(args) // 获取args切片的长度
+    for i := 1; i < length; i++ {
+        fmt.Println(args[i])
+    }
+}
+```
+
+### 5. 总结
+
+1. 使用`go mod init`初始化项目时，模块名最后一个单词要与项目文件夹名字相同。
+2. `main包`里的`main函数`是程序运行的入口。
+3. 变量初始化，for 循环，切片的语法不是这节的重点，后面会单独讲解。得到最终的可执行文件`echo`就表明你完成了本节内容。

@@ -1,0 +1,103 @@
+---
+title: 1.为什么选择Go
+---
+
+强烈推荐将 go 作为第一门编程语言，  Go 有以下特征:
+
+### 1. 语法简单, 没有魔法 [#simple]
+
+生成一个 0 到 9 的列表,python 支持列表推导式:
+
+```py
+squares = [x for x in range(10)]
+```
+
+而 go 更加明确，没有隐式的魔法糖:
+
+```go
+var squares []int
+for i := 0; i < 10; i++ {
+    squares = append(squares, i)
+}
+```
+
+go 的设计哲学强调简单、直接，尽量避免使用魔法。这可能会让人感觉 **boring**,但这正是我喜欢 Go 的地方。把 Go 看成**直男**吧，其他语言太**含蓄**了。
+
+### 2. 高性能 [#efficient]
+
+Go 的运行速度接近 C / Rust, 同时开发效率接近 Python / Ruby 等动态语言。Go 在性能和开发效率之间做了很好的平衡， 给双方搭建起了一座看似不可能的桥梁。
+
+### 3. 天生支持并发 [#concurrent]
+
+随着硬件的快速发展，手机处理器的核心数从 4 核到 12 核不等，服务器的核心则更多。但现有的编程语言都是基于单线程设计的，如 JavaScript, Python 等，通过不断地打补丁和第三方库来支持并发，历史包袱重。Go 正是在多核时代下应运而生的，天生支持并发的编程语言。
+
+并发是复杂的，涉及共享资源的管理，而实现高性能的并发更是难上加难。Go 能让你轻松地写出高效的并发程序。
+
+Java 开启一个线程打印 0-4：
+
+```java
+class MyThread extends Thread {
+    @Override
+    public void run() {
+        for (int i = 0; i < 5; i++) {
+            System.out.println("Thread: " + i);
+        }
+    }
+
+    public static void main(String[] args) {
+        // 创建线程对象
+        MyThread thread = new MyThread();
+        // 启动线程
+        thread.start();
+        // 主线程等待1s
+        Thread.sleep(1000);
+    }
+}
+```
+
+Go 使用 go 关键字开启一个协程:
+
+```go
+func main() {
+	go func() {
+		for i := 0; i < 5; i++ {
+			fmt.Println("Goroutine: ", i)
+		}
+    }()
+
+	// 主协程等待1s
+	time.Sleep(1 * time.Second)
+}
+```
+
+Go 的协程非常轻量，能同时开启成千上万的协程。
+
+### 4. 强静态类型 [#type]
+
+Python 运行时常有找不到对应方法的错误:
+
+```
+TypeError: unsupported operand type(s) for -: 'str' and 'int'
+```
+
+这是动态语言的缺点，变量类型要到运行时才能确定。没有类型的约束，代码的维护和扩展都变得很困难，所以 Python 在 3.5 版本引入了类型提示。Go 是强类型语言，类型错误会让编译不通过。
+
+### 5. 丰富的开发工具链 [#tools]
+
+Go 不只是一个编译器，还贴心地为开发者安排了一系列开发工具：
+
+- gofmt: 自动进行代码格式化，再也不用为代码风格吵得不可开交。统一的风格，能让我们轻松地查看他人的代码。
+- go mod: 去中心化依赖管理。如果你想开发一个包让别人使用，直接上传以 git 为基础的托管平台就好，如 github, gitlab 等。其他的语言都有一个中心化的仓库，例如 Javascipt 有 npm, Java 有 Maven 等。
+- go test: 内置测试工具。 
+
+我认为 Go 的依赖管理工具是设计得最杰出的。使用 python 常遇到依赖冲突的问题，你需要为不同的项目设置不同的虚拟环境；Java 需要在 Maven 配置文件中添加依赖。而 Go 有丰富的标准库，简单的项目甚至不需要使用第三方库，如果需要，只需一行命令(下载 echo 框架):
+
+```sh
+go get github.com/labstack/echo/v4
+```
+
+### 总结 [#summary]
+
+人生苦短，我用 Golang!
+
+当然，每门编程语言都有他的用途。如果你感受不到编程的乐趣，有时不一定是你的问题，多试几门语言，你会找到适合自己的。

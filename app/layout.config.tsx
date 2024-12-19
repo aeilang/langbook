@@ -1,4 +1,4 @@
-import { type HomeLayoutProps } from 'fumadocs-ui/home-layout';
+import { type HomeLayoutProps } from "fumadocs-ui/home-layout";
 
 /**
  * Shared layout configurations
@@ -9,8 +9,8 @@ import { type HomeLayoutProps } from 'fumadocs-ui/home-layout';
  */
 export const baseOptions: HomeLayoutProps = {
   nav: {
-    title: 'Home',
-    url: "/"
+    title: "LangBook",
+    url: "/",
   },
-  githubUrl: "http://github.com/aeilang/gopher"
+  githubUrl: "http://github.com/aeilang/langbook",
 };

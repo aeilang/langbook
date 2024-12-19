@@ -1,8 +1,24 @@
 {
-    "title": "go语言",
-    "defaultOpen": true,
-    "root": true,
-    "pages": [
-        "..."
-    ]
+  "title": "go语言",
+  "defaultOpen": false,
+  "root": true,
+  "pages": [
+    "index",
+    "whygo",
+    "env",
+    "echo",
+    "var",
+    "datastruct",
+    "flow",
+    "pointer",
+    "func",
+    "defer",
+    "struct",
+    "interface",
+    "error",
+    "generic",
+    "fmt",
+    "file",
+    "deped"
+  ]
 }
