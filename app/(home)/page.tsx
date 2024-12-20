@@ -35,7 +35,7 @@ export default function HomePage() {
           </div>
         </Link>
 
-        <Link href={"/docs/office"}>
+        <Link href={"/help"}>
           <div className="">
             <div className="">
               <img
