@@ -34,6 +34,21 @@ export default function HomePage() {
             <h1 className="">并发编程</h1>
           </div>
         </Link>
+
+        <Link href={"/docs/office"}>
+          <div className="">
+            <div className="">
+              <img
+                src="images/go.webp"
+                alt="go book"
+                height={800}
+                width={150}
+              />
+            </div>
+
+            <h1 className="">抑郁症测试</h1>
+          </div>
+        </Link>
       </div>
     </main>
   );
