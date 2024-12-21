@@ -64,22 +64,35 @@ func main() {
 
 ```go
 var a int8 = 1
-var b int  = a   // 编译期报错， a和b是不同的类型
+var b int  = a   // 编译期报错， a和b是不同的类型 // [!code highlight]
 ```
 
 即使你是64位系统，`int`和`int64`也是不同的类型
 
 ```go
 var a int64 = 1
-var b int   = a   // 编译期报错， a和b是不同的类型
+var b int   = a   // 编译期报错， a和b是不同的类型 // [!code highlight]
 ```
 
 需要显示类型转换，go提倡明确性，不支持魔法(隐式类型转换)
 
 ```go
 var a int64 = 1
-var b int   = int(a) 
+var b int   = int(a) // [!code highlight]
 ```
+
+</Callout>
+
+<Callout title="32位系统和64位系统的区别">
+
+是计算机系统的一种分类方式，主要取决于CPU的架构
+
+|              | CPU一次处理的最大数据宽度 | 理论支持最大内存      |
+| ------------ | ------------------------- | --------------------- |
+| **32位系统** | `32bit, 即 4 byte`        | `2^32 bit 即 4GB`     |
+| **64位系统** | `64bit, 即 8 byte`        | `2^64 bit 即 2^21 TB` |
+
+现代的计算机大都是`64位`架构。
 
 </Callout>
 
@@ -103,19 +116,21 @@ var x uint = -1 // 编译错误,不能存储负数
 
 - 类型转换bug
 
+将一个负数(-1)强制转换成`uint`类型：
+
 ```go
 var i int = -1
-var u uint = uint(i) // 不要这样做！会得到一个很大的数: 18446744073709551615
+var u uint = uint(i) // 不要这样做！会得到一个很大的数: 18446744073709551615 // [!code highlight]
 ```
 
 无符号整数使用很少，适合进行**位运行**。因为有符号整数需要1个bit来存储符号位，在进行位运算时会有意料不到的结果。其他情况下，你都应该使用`int`类型。
 
 <Callout title="什么是位运算?">
 
-| 运算符 | 描述              | 示例 | 结果 | uint8 |
+| 运算符 | 描述              | 示例 | 结果 | `uint8` |
 | ------ | ----------------- | -------- | ---- | ------ |
 | `&`    | 按位与： 两个位都为1，结果才为1 | `3 & 2` | `2` | (0000 0011) `&` (0000 0010) = (0000 0010) |
-| `|`      |   按位或 :  有一个位为1，结果就为1   | `3 | 2` | `3`  | (0000 0011) `|` (0000 0010)  = (0000 0011) |
+| `\|` |   按位或 :  有一个位为1，结果就为1   | `3 \| 2` | `3`  | (0000 0011) `\|` (0000 0010)  = (0000 0011) |
 | `^`    | 按位异或: 位相同为0，不同为1 | `3 ^ 2`  | `1`  | (0000 0011) `^` (0000 0010) = (0000 0001) |
 | `&^`   | 按位清除: ... | `3 &^ 2` | `1`  | (0000 0011) `^` (0000 0010) = (0000 0001) |
 | `<<`   | 左移: 向左移动几位，低位补0 | `3 << 1` | `6`  | (0000 0011) `<<` 1 =  (0000 0110)， 左移一位，低位补0 |
@@ -180,7 +195,7 @@ package main
 import "fmt"
 
 func main() {
-	a := 0b1010 // 1×2³ + 0×2² + 1×2¹ + 0×2⁰，等于 10。
+	a := 0b1010 // 1×2³ + 0×2² + 1×2¹ + 0×2⁰，等于 10。 // [!code highlight]
 	fmt.Println(a)
 }
 ```
@@ -199,7 +214,7 @@ package main
 import "fmt"
 
 func main() {
-	a := 012 // 1×8¹ + 2×8⁰，等于 10
+	a := 012 // 1×8¹ + 2×8⁰，等于 10 // [!code highlight]
 	fmt.Println(a)
 }
 ```
@@ -218,7 +233,7 @@ package main
 import "fmt"
 
 func main() {
-	a := 0xA // A在十六进制中表示10，10×16⁰ = 10
+	a := 0xA // A在十六进制中表示10，10×16⁰ = 10 // [!code highlight]
 	fmt.Println(a)
 }
 ```
@@ -261,7 +276,7 @@ func main() {
 - 浮点数字面量默认是`float64`类型， 保持一致。
 - 现代计算机的内存已经不是制约性能的瓶颈。
 
-1. 科学计数法，使用`e` [#science]
+1. 科学计数法，使用`e` 
 
 ```go
 a := 1.23e3   // 表示 1.23 × 10^3 = 1230.0
@@ -346,3 +361,334 @@ func main() {
 下午
 ```
 
+### 3.2 逻辑运算符
+
+| 逻辑运算符 | 作用                                                         | 示例              | 结果    |
+| ---------- | ------------------------------------------------------------ | ----------------- | ------- |
+| `&&`       | 逻辑与:  只有两个`bool值`都为`true`时，结果才为`true`        | `true && false`   | `false` |
+| `\|\|`     | 逻辑或:  只要有一个`bool值`为`true`时，结果就为`true`        | `true \|\| false` | `true`  |
+| `!`        | 逻辑非:  对`bool值`取反， `true`  变成   `false`, `false` 变成 `true` | `!true`           | `false` |
+
+**短路行为:**
+
+- `&&短路`： 如果第一个条件为 `false`，就不再再看第二个条件，因为结果已经确定为 `false`。
+
+```go title="main.go"
+package main
+import "fmt"
+
+func run() bool {
+	fmt.Println("run 函数运行")
+	return true
+}
+
+func main() {
+	a := false
+	// &&短路： a 已经false了，不会执行run()。
+	if a && run() {
+		fmt.Println("这一行也不会执行")
+	}
+}
+```
+我们定义了一个函数`run()`， 如果运行了，会打印"run 函数运行"。run 返回一个`true`。
+
+运行代码, 命令行什么也没输出。	
+
+- `||短路`:  如果第一个条件为`true`, 就不会再看第二个条件，因为结果已经确定为`true`
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func run() bool {
+	fmt.Println("run 函数运行")
+	return true
+}
+
+func main() {
+	b := true
+	// ||短路： b 已经true了，不会执行run函数
+	if b || run() {
+		fmt.Println("这一行会执行")
+	}
+}
+```
+
+运行
+
+```
+这一行会执行
+```
+
+## 4. 字节与字符
+
+1. 字节`byte`是`uint8`的别名，就是给`uint8`类型起了个别的名字，它们底层是一样的，表示范围是`0-255`， 但是它们是不同的类型。
+
+   `byte`, 常用来处理 **ASCII 字符** 。
+
+   ```go
+   var b byte = 'A' // 'A' 的 ASCII 值是 65
+   fmt.Println(b)   // 输出 65
+   ```
+
+   字符使用单引号`''`表示，字符串`string`使用双引号`""`表示。
+
+   <Callout title="什么是ASCII字符">
+
+   ASCII是基于英文字母的一种字符编码, 用来表示英文字母、数字和一些基本符号，不能表示非英文字符(中文，日文等)。我们叫它单字节字符，即`byte`。
+
+   go采用`utf-8`, 支持所有语言。`utf-8`是一种兼容 ASCII 的 Unicode 编码方案，
+
+   </Callout>
+
+2. 字符`rune`类型，是`int32`的别名，占4个字节，可以处理 **非 ASCII 字符**(中文，日文)。
+
+   ```go
+   var r rune = '汉' // '汉' 的 Unicode 码点是 27721
+   fmt.Println(r)   // 输出 27721
+   fmt.Printf("%c\n", r) // 输出 汉
+   ```
+
+   `fmt.Printf()`函数第一个参数是一个字符串`%c\n`, `%c`是一个占位动词，表明要替换成`r`对应的字符，即‘汉’。
+3. byte 和 rune 的比较
+
+| 特性 | byte | rune |
+| ---- | ---- | ---- |
+|定义别名|	`uint8`	|`int32`|
+|数据表示	|ASCII 字符 / 二进制数据	|Unicode 字符（码点）|
+|数据范围|	0 到 255| 	-2³¹ 到 2³¹-1|
+|占用内存	|1 字节	|4 字节|
+|典型用途	|处理单字节数据	|处理多字节字符|
+
+## 5. 字符串
+
+我们已经接触过`string`。使用双引号`""`定义一个`string`
+
+```go
+a := "hello, world"
+```
+
+1. `string`的底层是一个`[]byte`, 即字节类型的切片。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	a := "hello"
+    b := a[0]                // 取出第一个索引对应的字符，b是byte类型
+	fmt.Println(b)        	 // 打印b: 104
+	fmt.Printf("%c\n", a[0]) // 104对应的字符是`h`
+    fmt.Println(len(a))      // len返回a中byte的个数，即a的长度5
+}
+```
+
+运行
+
+```
+104
+h
+5
+```
+
+2. 使用`for-range`循环打印字符串中的字符:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	a := "hello"
+    // i是索引， c是索引对应的字符，rune类型
+	for i, c := range a { 
+         // i 是int类型，使用%d表示数组； c 是rune类型， 使用%c打印对应的字符
+		fmt.Printf("索引 %d, 字符: %c\n", i, c) 
+	}
+    fmt.Println(len(a)) // 打印a的长度, 5
+}
+```
+
+运行，输出
+
+```
+索引 0, 字符: h
+索引 1, 字符: e
+索引 2, 字符: l
+索引 3, 字符: l
+索引 4, 字符: o
+5
+```
+
+3. 但有汉字时，索引和长度会不一样:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	a := "汉字"
+	for i, c := range a {
+		fmt.Printf("索引 %d, 字符: %c\n", i, c)
+	}
+	fmt.Println(len(a)) // `len`返回a中byte的个数
+}
+```
+
+运行，输出
+
+```
+索引 0, 字符: 汉
+索引 3, 字符: 字
+6
+```
+
+a的长度为6，因为一个普通的汉字占3个字节，有的汉字占4个字节。`for-range`自动推断每个字符的起始索引(i)和需要几个字节。`utf-8`是可变长字符编码。一个字符不会超过4个字节，因此在`for-range`循环字符串时，c统一为`rune`类型(占4个字节)，不够4字节的高位补0就ok了。
+
+4. 总结:  
+
+Go中`string`的底层是`[]byte`， 有些字符需要多个byte来表示，但不会超过4个byte。
+
+## 6. 指针
+
+### 6.1 为什么需要指针
+
+现在有一个函数change，把传进来参数`num`参数乘2。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func change(num int) {
+	num = num * 2 // [!code highlight]
+}
+
+func main() {
+	a := 1 
+	change(a) // [!code highlight]
+	fmt.Println(a)
+}
+```
+
+思考一下，是打印`1`还是`2`
+
+运行，输出
+
+```
+1
+```
+
+为什么呢? Go语言中的**一切传递都是进行值复制**。每个函数运行时都有自己的栈空间(内存),运行结束就释放该内存。
+
+![](@/public/images/funcs.svg)
+
+a变量 并没有被改变，所以a还是1。有两种方法将a改变:
+
+1. 函数返回值，并把值赋值给a变量
+
+```go main.go
+package main
+
+import "fmt"
+
+func change(num int) int { // [!code highlight]
+	num = num * 2
+	return num // [!code highlight]
+}
+
+func main() {
+	a := 1
+	a = change(a) // 把返回值赋值给a变量 // [!code highlight]
+	fmt.Println(a)
+}
+```
+
+运行, a 变成了2
+
+```
+2
+```
+![](@/public/images/func2.svg)
+
+2. 我们把a的内存地址传到change()函数，直接改变地址的值就ok!
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func change(num *int) { // *int 是int的指针类型 // [!code highlight]
+	*num = *num * 2     // num是指针类型, *num 是把num解引用，获取指针指向的内存。 // [!code highlight]
+}
+
+func main() {
+	a := 1
+	change(&a) // 传入a的地址，&为取址操作 // [!code highlight]
+	fmt.Println(a)
+}
+```
+
+运行，a 变成了2
+
+```
+2
+```
+
+![](@/public/images/func3.svg)
+
+### 6.2 指针语法
+
+指针的类型为`*T`， `T`为其他类型，如`string`, `int`， `float64`等。`&`为取址操作符，即`&a`为取出a变量的内存地址。
+
+```go
+var a int = 1
+var pa *int = &a  // [!code highlight]
+
+var b bool = true
+var pb *bool = &b // [!code highlight]
+```
+
+![](@/public/images/pa.svg)
+
+`*bool`和`*int`虽然都是指针类型，但它们是不同的指针类型。
+
+```go
+var a int = 1
+var pb *bool = &a // cannot use &a (value of type *int) as *bool value in variable declaration // [!code highlight]
+```
+
+`&a`是`*int`类型，不能赋值给`pb` `*bool`类型。
+
+**解引用**
+
+通过在指针变量前加`*`解引用，获取其指向的内存空间。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	a := 1
+	pa := &a
+	fmt.Println(pa)  // 打印pa的值，0xc0000a2040 (a 的地址) // [!code highlight]
+	fmt.Println(*pa) // 打印pa指向的变量的值, 1 // [!code highlight]
+}
+```
+
+运行，输出
+
+```
+0xc0000a2040
+1
+```
+
+
+
+## 总结
+
+没有必要记住这些知识，遇到不懂的再来查就好。在后面的实战部分你会自动理解这些知识。先过一遍有个基础印象。

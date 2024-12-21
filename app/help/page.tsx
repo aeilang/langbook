@@ -109,11 +109,11 @@ function App() {
       <div className="container mx-auto max-w-2xl mt-56">
         <div className="flex-col items-center justify-center w-full">
           <header className="flex items-center space-x-24 pl-10">
-            <Button variant={"outline"}>
-              <Link href={"/"}>
+            <Link href={"/"}>
+              <Button variant={"outline"}>
                 <ArrowLeftFromLine />
-              </Link>
-            </Button>
+              </Button>
+            </Link>
             <h1 className="text-xl font-bold">PHQ-9 心理健康/抑郁症自测</h1>
           </header>
           <div className="w-full text-center my-2">
