@@ -1,3 +1,504 @@
 ---
 title: 复合类型
 ---
+
+光有砖和瓦还不够，我们还需要墙、门、板这些模型，才能快速构建起我们的大楼。我们需要把基本类型组合起来，这就是复合类型。
+
+## 1. 结构体  [#struct]
+
+使用`struct`来定义一个结构体类型。结构体是多个相关属性的集合，比如，人有年龄, 体重这些属性。
+
+```go
+type person struct {
+	age    int32
+	height int32
+}
+```
+
+<Callout title="type 定义类型">
+
+你可以使用`type`关键件创建一个新的类型，例如给`int32`类型起一个别名。
+
+```go
+type myint int32
+```
+
+`myint `类型的底层是`int32`, 但这两个不是一个类型。
+
+</Callout>
+
+### 1.1 结构体占多少内存? [#much]
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+type person struct {
+	age    int32 // 4 byte // [!code highlight]
+	height int32 // 4 byte // [!code highlight]
+}
+
+func main() {
+	p := person{
+		age:    18,
+		height: 160,
+	}
+	fmt.Println(unsafe.Sizeof(p))
+}
+
+```
+
+运行，输出(64位系统):
+
+```
+8
+```
+
+`person`结构体占用8个字节。我们知道`age` 和`height`是`int32类型`，都占4个字节， 加起来正好8个字节。
+
+![](@/public/images/struct1.svg)
+
+<Callout title="结构体怎么初始化">
+
+1. 当我们只声明结构体时，go自动赋予结构体零值。结构体的零值就是包含的字段的零值
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+type person struct {
+	age    int32
+	height int32
+}
+
+func main() {
+	var p person // [!code highlight]
+	fmt.Printf("%#v\n", p) // %#v 表示打印p变量的详细信息
+}
+```
+
+运行，输出
+
+```
+main.person{age:0, height:0}
+```
+
+2. 使用结构体字面量初始化
+
+```go
+p := person{
+		age:    18,
+		height: 160,
+}
+```
+
+`person{age: 18, height: 160}`就是结构体的字面量，以类型开头，大括号里写入各个字段的值。
+
+如果有的字段没有指明，就会赋予这个字段对应类型的零值：
+
+```go
+p := person{
+    age: 18
+} // p: person{age: 18, height: 0}
+```
+
+3. 读取和修改结果体的字段
+
+```go title="main.go"
+package main
+import (
+	"fmt"
+)
+type person struct {
+	age    int32
+	height int32
+}
+func main() {
+	p := person{age: 18, height: 160} 
+
+	// 读取
+	age := p.age // age = 18 // [!code highlight]
+	fmt.Println(age)
+
+	// 修改
+	p.age = 35 // [!code highlight]
+	fmt.Println(p) // {age: 35, height: 160}
+}
+```
+
+运行，输出
+
+```
+18
+{35 160}
+```
+
+</Callout>
+
+我们可以设想，不包含字段的结构体即 空结构体不占内存，验证一下
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+type empty struct { // 空结构体 
+}
+
+func main() {
+	p := empty{}
+	fmt.Println(unsafe.Sizeof(p))
+}
+```
+
+运行，输出
+
+```
+0
+```
+
+果然，**空结构体不占内存！**， 这在并发编程传递取消信号时很有用，因为不占内存，就减少了复制开销。我们在传递取消信号时，不关心传递了什么类型的变量，只关心有东西传递过来了。
+
+### 1.2 结构体内存对齐规则  [#memo]
+
+**规则1**：
+
+如果把person结构体的`age`的类型改为`int8`, 结构体会占用多少内存呢? 根据上面的经验，应该占1+4=5 byte
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+type person struct {
+	age    int8  // 1 byte // [!code highlight]
+	height int32 // 4 byte
+}
+
+func main() {
+	p := person{age: 18, height: 160}
+	fmt.Println(unsafe.Sizeof(p))
+}
+```
+
+运行，输出
+
+```
+8
+```
+
+然而更改后的结构体占8个字节，而不是5个字节。因为这里涉及到内存对齐，规则1: **整个结构体的大小必须是最大字段大小的整数倍。 这里的最大字段必须是基本类型(如整数，布尔， 浮点数等，不包括`string`)**
+
+`person结构体`占内存最大的是`height`, 4 个字节，整体必须是4的倍数，又要加1个字节，所以是8个字节。 
+
+![](@/public/images/uint.svg)
+
+**规则2：**
+
+我们看两个有趣的现象，看看结构体的字段不同的排列方式如何影响占用内存:
+
+![](@/public/images/two.png)
+
+这里引出规则2: **每个字段的起始位置必须是其类型大小的整数倍**。结构体内存对齐受到两个规则的约束，这启示我们，把占内存大的字段排在前面，（其实咋排都没关系，影响不大，我们知道原理就好。）
+
+## 2. 数组 [#array]
+
+为什么会有数值类型？当我们需要一组顺序排序的元素，需要快速地读取和修改第几个元素时 (例如书架上的书)， 就需要用到数组类型。
+
+###  2.1 数组的定义
+
+数组的类型是`[len]T`, len为数组的长度，T为包含元素的类型:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+    // 创建一个长度为5，类型为int的数组 // [!code highlight]
+	arr := [5]int{1, 2, 3, 4, 5} // [!code highlight]
+	fmt.Println(arr)
+}
+```
+
+输出
+
+```
+[1 2 3 4 5]
+```
+
+也可以省略长度，用`...`代替，go会帮我们自动推断出长度
+
+```go
+arr := [5]int{1, 2, 3, 4, 5}
+```
+
+等价于
+
+```go
+arr := [...]int{1, 2, 3, 4, 5}
+```
+
+声明空数组会默认初始化为它的零值
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var arr [5]int // [!code highlight]
+	fmt.Println(arr)
+}
+```
+
+输出
+
+```
+[0 0 0 0 0]
+```
+
+### 2.2 数组的读取和修改
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	arr := [5]int{1, 2, 3, 4, 5} 
+    a1 := arr[0] // a1 = 1, 读取第一个元素 // [!code highlight]
+	fmt.Println(a1)
+    
+    arr[0] = 9 // 修改arr的第一个元素为9 // [!code highlight]
+    fmt.Println(arr)
+}
+```
+
+输出
+
+```
+1
+[9 2 3 4 5]
+```
+
+### 2.3 数组的索引越界
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	arr := [5]int{1, 2, 3, 4, 5}
+	a1 := arr[5] // 5越界，最大的索引为4     // [!code highlight]
+	fmt.Println(a1)
+}
+```
+
+运行, 编译期 panic:
+
+```
+index 5 out of bounds
+```
+
+![](@/public/images/arr.svg)
+
+### 2.4 数组的长度是其类型的一部分
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var arr [5]int
+	arr2 := [2]int{1, 2} 
+	arr = arr2 // 不同长度的数组是不同的类型 // [!code highlight]
+	fmt.Println(arr)
+}
+```
+
+运行，编译期panic:
+
+```
+cannot use arr2 (variable of type [2]int) as [5]int value in assignment
+```
+
+### 2.5 数组占多少内存
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+func main() {
+	arr := [5]int{1, 2, 3, 4, 5}
+	fmt.Println(unsafe.Sizeof(arr))
+}
+
+```
+
+运行，输出
+
+```
+40
+```
+
+每个int类型占8个字节，一共有5个，5*8=40 个字节。数组在内存中是连续分布的，方便根据索引来快速访问和修改元素。
+
+![](@/public/images/arr2.svg)
+
+所以数组占用内存 = 元素占用的内存 * 数组长度。
+
+## 3. 切片 [#slice]
+
+有意思的部分来了。因为数组的长度就是它类型的一部分，我们不能增加和删除元素，所以Go创造了切片。我们使用最多的就是切片，而不是数组。
+
+### 3.1 切片的定义
+
+切片的类型是`[]T`， T可以是任何类型。和数组不同，切片的长度不是类型的一部分。
+
+- 声明一个切片但没初始化，go会赋予它的零值，`nil`。`nil`就是没有的意思。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var s []int // [!code highlight]
+	fmt.Println(s == nil)
+}
+```
+
+运行，输出
+
+```
+true
+```
+
+- 使用切片的字面量声明并初始化：
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	s := []int{1, 2, 3} // [!code highlight]
+	fmt.Println(s)
+    fmt.Println(len(s)) // len(s) 返回切片的长度 3
+	fmt.Println(cap(s)) // cap(s) 返回切片的容量 3
+}
+```
+
+输出
+
+```·
+[1 2 3]
+3
+3
+```
+
+`[]int{1, 2, 3}`就是切片的字面量，它定义了切片的类型和包含的元素。
+
+- 使用`make([]T, len, cap)`声明并初始化
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	// 创建一个长度为2，容量为4的[]int类型的切片
+	s := make([]int, 2, 4)
+	fmt.Println(s) // [0, 0]
+	fmt.Println(len(s)) // len(s) 返回切片的长度 2
+	fmt.Println(cap(s)) // cap(s) 返回切片的容量 4
+}
+```
+
+输出
+
+```
+[0 0]
+2
+4
+```
+
+`make`会初始化对应长度的零值。
+
+- 也可以省略容量，`make([]T, len)`这是容量等于长度。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	// 创建一个长度为2，容量为2的[]int类型的切片
+	s := make([]int, 2) // [!code highlight]
+	fmt.Println(s) // [0, 0]
+	fmt.Println(len(s)) // len(s) 返回切片的长度 2
+	fmt.Println(cap(s)) // cap(s) 返回切片的容量 2
+}
+```
+
+输出
+
+```
+[0 0]
+2
+2
+```
+
+切片的读取、修改和索引越界与数组相同，这里不再赘述。（切片的底层就是数组）
+
+### 3.2 增加和删除元素
+
+- 使用`append`函数增加
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	// 定义一个长度为0的空切片
+	s := make([]int, 0) // s = []
+	fmt.Printf("开始： s = %v, len=%d, cap=%d\n", s, len(s), cap(s)) // %v打印s的值，%d打印整数。
+
+	// 增加一个元素
+	s = append(s, 1) // s = [1]
+	fmt.Printf("开始： s = %v, len=%d, cap=%d\n", s, len(s), cap(s))
+
+	// 同时增加多个元素
+	s = append(s, 2, 3, 4) // s = [1 2 3 4]
+	fmt.Printf("开始： s = %v, len=%d, cap=%d\n", s, len(s), cap(s))
+}
+```
+
+
+
+### 3.3 切片占多少内存
+
+
+
+## 4. map [#map]

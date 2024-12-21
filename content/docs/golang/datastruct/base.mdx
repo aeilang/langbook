@@ -325,6 +325,36 @@ func main() {
 false
 ```
 
+`bool `类型占1字节。
+
+<Callout title="如何查看一个变量占多少内存？">
+
+标准库**unsafe**包里有一个函数`SizeOf`, 输出一个变量在内存中占多少字节。
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+func main() {
+	var a bool = true
+	fmt.Println(unsafe.Sizeof(a))
+}
+```
+
+输出
+
+```
+1
+```
+
+即a占1个字节， bool类型占1个字节。
+
+</Callout>
+
 ### 3.1 关系运算符
 
 常用关系运算符来创建`bool`变量:
