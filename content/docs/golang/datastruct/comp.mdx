@@ -445,7 +445,7 @@ func main() {
 
 `make`会初始化对应长度的零值。
 
-- 也可以省略容量，`make([]T, len)`这是容量等于长度。
+- 也可以省略容量，`make([]T, len)`这时容量等于长度。
 
 ```go title="main.go"
 package main
@@ -478,27 +478,378 @@ func main() {
 ```go title="main.go"
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
 	// 定义一个长度为0的空切片
-	s := make([]int, 0) // s = []
-	fmt.Printf("开始： s = %v, len=%d, cap=%d\n", s, len(s), cap(s)) // %v打印s的值，%d打印整数。
+	s := make([]int, 0)
+	fmt.Printf("开始s：, len=%d, cap=%d\n", len(s), cap(s)) // %d打印整数。
 
-	// 增加一个元素
-	s = append(s, 1) // s = [1]
-	fmt.Printf("开始： s = %v, len=%d, cap=%d\n", s, len(s), cap(s))
-
-	// 同时增加多个元素
-	s = append(s, 2, 3, 4) // s = [1 2 3 4]
-	fmt.Printf("开始： s = %v, len=%d, cap=%d\n", s, len(s), cap(s))
+    // 依次增加10个元素，i从0到9
+	for i := range 10 {
+		s = append(s, i)
+		fmt.Printf("增加第%d个元素： len=%d, cap=%d\n", i+1, len(s), cap(s))
+	}
 }
+```
+
+输出
+
+```
+开始s：, len=0, cap=0
+增加第1个元素： len=1, cap=1
+增加第2个元素： len=2, cap=2
+增加第3个元素： len=3, cap=4
+增加第4个元素： len=4, cap=4
+增加第5个元素： len=5, cap=8
+增加第6个元素： len=6, cap=8
+增加第7个元素： len=7, cap=8
+增加第8个元素： len=8, cap=8
+增加第9个元素： len=9, cap=16
+增加第10个元素： len=10, cap=16
 ```
 
 
 
+<Callout title="切片扩容策略">
+
+对应扩容前的切片(`ls`), 设
+
+- 它的长度`len0 = len(ls)`
+
+- 容量`cap0 = cap(ls)`
+- `append()`函数要添加的元素个数为`n`
+
+| 切片的容量 | 扩容后的长度               |
+| ---------- | -------------------------- |
+| 小于256    | `max(len0+n, 2 * cap0) `   |
+| 中间地带   | `2*cap0 -> 1.25*cap0` 过渡 |
+| 大容量数组 | 约等于 `1.25*cap0`         |
+
+简单来说，小容量切片扩容容量翻倍，大容量切片扩容容量翻1.25倍。中间地带是平滑过渡的曲线。有`runtime`包为证:
+
+```go title="runtime/slice.go"
+// nextslicecap 计算下一个适当的切片长度。
+func nextslicecap(newLen, oldCap int) int {
+    newcap := oldCap
+    doublecap := newcap + newcap
+    if newLen > doublecap {
+        return newLen
+    }
+
+    const threshold = 256
+    if oldCap < threshold {
+        return doublecap
+    }
+    for {
+        // 从小切片的2倍增长过渡到大切片的1.25倍增长。
+        // 这个公式在两者之间提供了一个平滑的过渡。
+        newcap += (newcap + 3*threshold) >> 2
+
+        // 我们需要检查 `newcap >= newLen` 以及 `newcap` 是否溢出。
+        // newLen 保证大于零，因此当 newcap 溢出时，
+        // `uint(newcap) > uint(newLen)` 。
+        // 这使得我们可以通过相同的比较来检查这两者。
+        if uint(newcap) >= uint(newLen) {
+            break
+        }
+    }
+
+    // 当 newcap 计算溢出时，设置 newcap 为请求的 cap 值。
+    if newcap <= 0 {
+        return newLen
+    }
+    return newcap
+}
+```
+
+为什么要设置这样的扩容策略？切片的底层是数组，每次扩容都要新建一个数组，把旧的数组复制到新的数组，所以要尽量扩容大一些。但当容量很大时，扩容两倍的数组又很浪费空间，所以扩容1.25倍。
+
+</Callout>
+
+你可以一次性增加多个元素:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ls := []int{1, 2, 3}
+	ls = append(ls, 4, 5, 6) // [!code highlight]
+	fmt.Println(ls)
+}
+```
+
+输出
+
+```
+[1 2 3 4 5 6]
+```
+
+记得把`append`返回的切片赋值给原切片`ls`
+
+也可以把一个切片的元素添加到另一个切片，使用`...`操作符解开
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ls1 := []int{1, 2, 3}
+	ls2 := []int{4, 5, 6}
+
+	ls1 = append(ls1, ls2...) // ...把切片解开 // [!code highlight]
+	fmt.Println(ls1)
+}
+```
+
+输出
+
+```
+[1 2 3 4 5 6]
+```
+
 ### 3.3 切片占多少内存
 
+使用`unsafe.Sizeof()`查看切片占多少字节的内存
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+func main() {
+	ls1 := []int{1, 2, 3}
+	ls2 := []int{}
+
+	fmt.Println(unsafe.Sizeof(ls1)) 
+	fmt.Println(unsafe.Sizeof(ls2)) 
+}
+```
+
+输出
+
+```
+24
+24
+```
+
+其实，**所有的切片都占`24`个字节**。为什么呢? 我们看看切片是怎么实现的
+
+```go title="runtime/slice.go"
+type slice struct {
+	array unsafe.Pointer // 指针: 8 byte， 指向底层数组 
+	len   int            // 8byte
+	cap   int            // 8byte
+}
+```
+
+根据结构体内存对齐的规则，切片就占`8+8+8=24`个字节。
+
+已下面的切片`ls`为例
+
+```go
+ls := []int8{1,2,3}
+```
+
+它在内存中是这样的:
+
+![](@/public/images/s1.svg)
+
+### 3.4 切片的常见错误
+
+思考一个问题，下面的切片`ls`会改变吗
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func x2(ls []int) {
+	for i, v := range ls { // i 是ls 的索引，v 是ls的值
+		ls[i] = v * 2 
+	}
+}
+
+func main() {
+	ls := []int{1, 2, 3}
+	x2(ls)
+	fmt.Println(ls)
+}
+```
+
+我们将`ls`传入`x2`函数，这个函数作用是将`ls`的每个元素乘2。
+
+运行， 输出
+
+```
+[2 4 6]
+```
+
+ls改变了，为什么会改变呢，我们并没有传入`ls`的指针`*[]int`呀。原因是切片的实现就包含有指针指向底层数组。我们知道，Go中一切传输都是进行复制:
+
+![](@/public/images/s2.svg)
+
+聪明的你，下面的`ls`会改变吗?
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func add(ls []int) {
+	ls = append(ls, 4)
+}
+
+func main() {
+	ls := []int{1, 2, 3}
+	add(ls) 
+	fmt.Println(ls)
+}
+```
+
+输出
+
+```
+[1 2 3]
+```
+
+为什么ls 不会改变呢。首先`append`函数会先判断`ls`底层还有没有足够的容量来存`4`。显然是没有的，因为`ls`的长度和容量都是`3`。那么`append`就会新建一个底层数组，如图：
+
+![](@/public/images/s3.svg)
+
+底层数组没有改变，所以main函数里的`ls`不会改变。
+
+为了使外面的`ls`改变，我们让`add`函数返回`ls`即可，像`append`函数一样:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func add(ls []int) []int { // [!code highlight]
+	ls = append(ls, 4)
+    return ls // [!code highlight]
+}
+
+func main() {
+	ls := []int{1, 2, 3}
+	ls = add(ls) // [!code highlight]
+	fmt.Println(ls)
+}
+```
+
+输出
+
+```
+[1 2 3 4]
+```
+
+将接片作为参数传入函数要特别小心，函数有没有`append`操作，如果有，切片是否有足够的容量来存放新的切片。如果没有，那么`append`会进行扩容，返回一个新的切片，外面的切片就不会改变。
 
 
-## 4. map [#map]
+
+## 4. 字符串 [#string]
+
+字符串虽然是基本类型，但它的实现和切片差不多，我们来看看吧。
+
+### 4.1 字符串占多少内存呢？
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+func main() {
+	var str1 string // 空字符串 ""
+	str2 := "hello world"
+
+	fmt.Println(unsafe.Sizeof(str1))
+	fmt.Println(unsafe.Sizeof(str2))
+}
+```
+
+运行，输出
+
+```
+16
+16
+```
+
+我们发现，所以的`string`都占16个字节，为什么呢？我们来看它的实现:
+
+```go
+type string struct {
+	array unsafe.Pointer // 指针 8byte
+	len   int            // 8 byte
+}
+```
+
+string是一个结构体，根据结构体内存对齐的规则，它占`8+8=16`个字节。
+
+已下面的`str`为例:
+
+```go
+str := "hello"
+```
+
+它在内存中是这样的:
+
+![](@/public/images/str1.svg)
+
+和切片不同的是,`string`是没有容量的。为什么呢，Go在设计时就让`string`不能变:
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	str := "hello world"
+	str[0] = 'o' // 编译期报错
+	fmt.Println(str)
+}
+```
+
+输出，编译期错误panic:
+
+```
+cannot assign to str[0] (neither addressable nor a map index expression
+```
+
+### 4.2 字符串相加？
+
+聪明的你，两个字符串相加会发生什么?
+
+```go main.go
+package main
+
+import (
+	"fmt"
+)
+
+func main() {
+	str1 := "hello"
+	str2 := "world"
+	str := str1 + str2
+	fmt.Println(str)
+}
+```
+
+字符串是不能变的，相加会创建新的底层数组:
+
+![](@/public/images/str2.svg)
+
+## 5. map [#map]
