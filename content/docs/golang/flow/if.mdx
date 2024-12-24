@@ -1,3 +1,281 @@
 ---
 title: 条件语句
 ---
+
+条件语句包括`if` 和 `switch`
+
+## 1. `if` 语句 [#if]
+
+`if` 语句用于根据条件执行代码块。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+    x := 10
+    if x > 0 {
+        fmt.Println("x 是正数")
+    } else if x < 0 {
+        fmt.Println("x 是负数")
+    } else {
+        fmt.Println("x 是零")
+    }
+}
+```
+
+输出
+
+```
+x 是正数
+```
+
+你可以在`if`语句声明变量,该变量的作用域是整个`if`语句
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	if x := 10; x > 0 { // [!code highlight]
+		fmt.Printf("%d 是正数\n", x)
+	} else {
+		fmt.Printf("%d 是正数\n", x)
+	}
+
+    // panic: 这里访问不到x，x的作用范围只在if语句里。
+	// fmt.Println(x) // [!code highlight]
+}
+```
+
+运行
+
+```
+10 是正数
+```
+
+## 2. `switch`语句 [#switch]
+
+当有两个以上的条件判断时，使用if 就显得有些繁琐，这种情况`switch`语句就排上用场了!
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	day := "星期二"
+	switch day {
+	case "星期一":
+		fmt.Println("今天是星期一")
+	case "星期二":
+		fmt.Println("今天是星期二")
+	case "星期三":
+		fmt.Println("今天是星期三")
+	default:
+		fmt.Println("今天是其他日子")
+	}
+}
+```
+
+输出
+
+```
+今天是星期二
+```
+
+`switch`接收一个变量，将这个变量与每个`case`做比较，如果相等就执行对应的`case`代码块。如果所有的`case`都不相等，就会执行默认的`default`代码块。和其他语言不同，`switch`只执行一个代码块，执行完后就退出`switch`语句。
+
+`switch`也可以不接收变量，直接在`case`做判断，哪个`case`为`true`就执行对应代码块:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	day := "星期二"
+	switch {
+	case day == "星期一":
+		fmt.Println("今天是星期一")
+	case day == "星期二":
+		fmt.Println("今天是星期二")
+	case day == "星期三":
+		fmt.Println("今天是星期三")
+	default:
+		fmt.Println("今天是其他日子")
+	}
+}
+```
+
+输出
+
+```
+今天是星期二
+```
+
+`switch`是按照从上到下的顺序执行的，如果有多个`case`都为`true`则执行第一个为`true`的`case`。(尽量不要写出这种代码，哈哈)
+
+例如，我把第一个`case`改成`true`
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	day := "星期二"
+	switch {
+	case true: // [!code highlight]
+		fmt.Println("今天是星期一")
+	case day == "星期二":
+		fmt.Println("今天是星期二")
+	case day == "星期三":
+		fmt.Println("今天是星期三")
+	default:
+		fmt.Println("今天是其他日子")
+	}
+}
+```
+
+输出
+
+```
+今天是星期一
+```
+
+你也可以在`switch`语句里声明变量，该变量的作用范围是整个`switch`语句
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	switch day := "星期二"; day { // [!code highlight]
+	case "星期一":
+		fmt.Println("今天是星期一")
+	case "星期二":
+		fmt.Println("今天是星期二")
+	case "星期三":
+		fmt.Println("今天是星期三")
+	default:
+		fmt.Println("今天是其他日子")
+	}
+    
+    // panic: 这里访问不到day，day的作用范围只在switch语句里。
+	// fmt.Println(day) // [!code highlight]
+}
+```
+
+输出
+
+```
+今天是星期二
+```
+
+### 2.1 判断变量类型 [#type]
+
+`switch`常结合**类型断言**来判断**接口类型的变量**的底层类型
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+    var value any = 42 // any 是interface{} 空接口的别名，可以存任何类型
+
+	switch v := value.(type) {
+	case int:
+		fmt.Printf("value is an int: %d\n", v) // %d格式化整数类型变量
+	case string:
+		fmt.Printf("value is a string: %s\n", v) // %s格式化string类型变量
+	case bool:
+		fmt.Printf("value is a bool: %t\n", v) // %t格式化bool类型变量
+	default:
+		fmt.Printf("unknown type: %T\n", v) // %T 输出v对应的类型
+	}
+}
+```
+
+输出
+
+```
+value is an int: 42
+```
+
+因为`42`默认是`int`类型的直面量，即`value`的底层是`int`类型。
+
+Go 中`any`类型是`interface{}`空接口的别名，可以存放任何类型，接口会在后边讲。
+
+`v := value.(type)` 是`switch`中特有的类型断言语法，只会在`switch`中出现。每个`case`代码块中的变量`v`的类型就是对应的类型了，很神奇，(看格式化动词`%d`, `%s`, `%t` 就能知道`v`的类型)。
+
+<Callout title="类型断言">
+
+Go 是强类型的语言，常需要进行类型转换。
+
+对于一些底层相同的基本类型，如(整形)，我们可以直接转换:
+
+```go
+var num1 byte = 10
+var num2 int
+num2 = int(num1) // 将byte类型转换成int类型 // [!code highlight]
+```
+`byte`是`uint8`的别名，都是整形，能转换成功。
+
+但如果是接口类型，就得使用类型断言, 语法为`v, ok := val.(type)`
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var num1 any = 10
+
+	num2, ok := num1.(int) // 断言成int类型 // [!code highlight]
+	if !ok {               // 如果断言失败
+		fmt.Println("转换失败， num1底层不是int类型")
+		return
+	}
+
+	fmt.Println("转化成功，num2=", num2)
+}
+```
+
+输出
+
+```
+转化成功，num2= 10
+```
+
+如果转换不成功, `ok`为`false`时，`num2`就为对应类型的零值。`int`的零值是`0`。
+
+你也可以缺省`ok`：
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var num1 any = "hello" // [!code highlight]
+	num2 := num1.(int) // 断言成int类型 // [!code highlight]
+	fmt.Println(num2)
+}
+```
+
+`num1`的底层是`string`，不是`int`，断言会失败，缺省`ok`程序会`panic`
+
+运行，输出
+
+```
+panic: interface conversion: interface {} is string, not int
+```
+
+ 建议保留`ok`, 我们自己决定转换失败的逻辑。
+
+</Callout>

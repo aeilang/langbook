@@ -2,12 +2,57 @@
 title: 循环
 ---
 
-#### 3.2 for 循环语法
+我们使用循环来重复执行某些代码，减少重复的代码。Go提倡简洁，`for` 循环是唯一的循环结构。
+
+## 1. for 语句
+
+我们在**从echo开始**的章节提到了`for循环`语法，现在再温习一下:
+
+```go
+for 初始化语句; 条件表达式; 后置语句 {
+    // 循环体
+}
+```
+
+- **初始化语句**：在循环开始时执行一次的语句（通常用来初始化变量）。
+
+- **条件表达式**：在每次迭代前计算，若为 `true` 则继续执行循环体，否则退出循环。
+
+- **后置语句**：每次循环结束后执行的语句（通常用来更新变量）。
+
+举个例子，我们打印 0-9
+
+```go
+for i := 0; i < 10; i++ {
+    fmt.Println(i)
+}
+```
+
+会输出
+
+```
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+
+执行顺序是这样的:
+
+![](@/public/images/for.svg)
+
+我们注意到，`for循环`初始化语句必须使用短声明语句`:=`， 而不能使用`var`声明。
 
 1. `for`循环三个语句到可以缺省，例如，我们缺省后置语句`i++`
 
 ```go
-for i := 0; i < 10; {
+for i := 0; i < 10; { // [!code highlight]
     fmt.Println(i)
     i++
 }
@@ -19,7 +64,7 @@ for i := 0; i < 10; {
 
 ```go
 i := 0
-for ; i < 10; {
+for ; i < 10; { // [!code highlight]
     fmt.Println(i)
     i++
 }
@@ -31,9 +76,9 @@ for ; i < 10; {
 
 ```go
 i := 0
-for {
+for { // [!code highlight]
     fmt.Println(i)
-    i++
+    i++ 
 }
 ```
 
@@ -45,7 +90,7 @@ for {
 i := 0
 for {
     if i >= 10 {
-        break
+        break // [!code highlight]
     }
     fmt.Println(i)
     i++
@@ -64,8 +109,8 @@ if 语句会判断 i 是否大于等于 10，如果大于等于 10， 就会执�
 
 ```go
 for i := 0; i < 10; i++ {
-    if i == 5 {
-        continue
+    if i == 5 { 
+        continue // [!code highlight]
     }
     fmt.Println(i)
 }
@@ -87,4 +132,177 @@ for i := 0; i < 10; i++ {
 
 在 `i` = 5 时，if 语句被通过，`continue`执行，下面打印的代码就会被跳过，直接进行下一次迭代(`i = 6`)
 
-#### 4. for-range 语句
+## 2. for-range 语句
+
+`for range` 循环是一种用于遍历数组、切片、字符串、map和通道的简便方式。它能够让你轻松地访问集合中的每个元素及其索引。
+
+### 2.1 遍历整数
+
+也可以这样打印`0-9`
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	for i := range 10 { // [!code highlight]
+		fmt.Println(i)
+	}
+}
+```
+
+输出
+
+```
+0
+1
+2
+3
+4
+5
+6
+7
+8
+9
+```
+
+循环从0开始，到`10-1=9`结束。
+
+### 2.2 遍历切片
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ls := []int{1, 2, 3, 4, 5}
+	for i, v := range ls { // i 是索引， v 是值 // [!code highlight]
+		fmt.Printf("索引: %d, 值: %v\n", i, v)
+	}
+}
+```
+
+输出
+
+```
+索引: 0, 值: 1
+索引: 1, 值: 2
+索引: 2, 值: 3
+索引: 3, 值: 4
+索引: 4, 值: 5
+```
+
+不用担心索引越界的问题。
+
+也可以缺省值，只遍历索引:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ls := [5]int{1, 2, 3, 4, 5} 
+	for i := range ls { // [!code highlight]
+		fmt.Printf("索引: %d\n", i)
+	}
+}
+```
+
+输出
+
+```
+索引: 0
+索引: 1
+索引: 2
+索引: 3
+索引: 4
+```
+
+数组的遍历和切片一样。
+
+### 2.3 遍历字符串
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	str := "hello"
+	for i, s := range str { // [!code highlight]
+		fmt.Printf("索引: %d, 字符: %c\n", i, s) // %c 格式化rune类型对应的字符，utf-8编码
+	}
+}
+```
+
+输出:
+
+```
+索引: 0, 字符: h
+索引: 1, 字符: e
+索引: 2, 字符: l
+索引: 3, 字符: l
+索引: 4, 字符: o
+```
+
+字符串有些特殊，会按照`utf-8`编码来遍历字符串。试试将`str`的值改为中文字符。
+
+字符串遍历也可以和切片一样缺省值(s), 只遍历索引。
+
+### 2.4 遍历map
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	m := map[string]string{
+		"k1": "v1",
+		"k2": "v2",
+	}
+
+	for k, v := range m { // [!code highlight]
+		fmt.Printf("键: %s, 值: %s\n", k, v)
+	}
+}
+```
+
+输出
+
+```
+键: k1, 值: v1
+键: k2, 值: v2
+```
+
+`k`存储键，`v`存储值。
+
+也可以缺省值，只遍历键:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	m := map[string]string{
+		"k1": "v1",
+		"k2": "v2",
+	}
+
+	for k := range m { // [!code highlight]
+		fmt.Println("键:", k)
+	}
+}
+```
+
+输出
+
+```
+键: k1
+键: k2
+```
+
