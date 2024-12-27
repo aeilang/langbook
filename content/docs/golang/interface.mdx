@@ -6,7 +6,7 @@ Go是强类型的语言，有了接口带来了很大的灵活性。
 
 ## 1. 接口的定义
 
-接口类型就是一系列方法的集合，莫类型只要实现了这些方法，就可以传给改接口。
+接口类型就是一系列方法的集合，某类型只要实现了这些方法，就可以传给该接口。
 
 定义一个接口`rapper`,只要会唱(sing), 跳(dance)它就是一个`rappper`
 
@@ -114,7 +114,7 @@ type club struct {
 }
 ```
 
-俱乐部会举办了一个演出，演出期间`rapper`会唱`sing`和跳`dance`m, 用一个`show`方法实现:
+俱乐部会举办了一个演出，演出期间`rapper`会唱`sing`和跳`dance`, 用一个`show`方法实现:
 
 ```go
 func (c club) show() {
@@ -123,7 +123,7 @@ func (c club) show() {
 }
 ```
 
-好的，现在让club开起了, 使用`person`类型作为`rapper`
+好的，现在让club开起来, 使用`person`类型作为`rapper`
 
 ```go
 func main() {
@@ -180,9 +180,9 @@ lang 在唱
 lang 在跳
 ```
 
-到这里，还体现不出接口的好处。摄像一下，有一天`person`病了，来不了了，`club`办不了了怎么办?
+到这里，还体现不出接口的好处。设想一下，有一天`person`病了，来不了了，`club`办不了了怎么办?
 
-这时我们可以使用接口实现无缝切换到另一个`rapper`。
+这时我们可以通过接口无缝切换到另一个`rapper`。
 
 实现另一个`rapper`, 一只猫也可以成为`rapper`:
 
@@ -200,7 +200,7 @@ func (p cat) dance() {
 }
 ```
 
-好的，把`club`开起了
+好的，把`club`开起来
 
 ```go
 func main() {
@@ -269,5 +269,116 @@ func main() {
 花猫 在扭腰
 ```
 
-接口就是这样，让依赖和实现分离，你可以切换自如。把接口想象成你电脑的`USB`接口，只要形状一样，就可以插进来。这样一个可以同时支持键盘，鼠标，麦克风等功能。如果一个设备坏了，例如鼠标坏了，直接换另一个新的鼠标插入就好，不要拆开电脑换。
+接口就是这样，让依赖和实现分离，你可以切换自如。把接口想象成你电脑的`USB`接口，只要形状一样，就可以插进来。这样一个接口可以同时支持键盘，鼠标，麦克风等不同功能。如果一个设备坏了，例如鼠标坏了，直接换另一个新的鼠标插入就好，不需要拆开电脑换。
 
+## 3 接口进行嵌套
+
+有两个接口: rapper 和 programmer
+
+```go
+type rapper interface {
+	sing()
+	dance()
+}
+
+type programmer interface {
+    code()
+}
+```
+
+你可以组合成另一个接口`rapprogrammer`
+
+```go
+type rapprogrammer interface {
+	rapper
+    programmer
+}
+```
+
+其实就是等价于
+
+```go
+type rapprogrammer interface {
+	sing()
+	dance()
+    code()
+}
+```
+
+实现了`rapprogrammer`接口也就实现了`rapper`和`programmer`接口，很好理解对吧，只要类型实现了某接口的所有方法就是实现了该接口。
+
+## 4 空接口
+
+我们经常使用`any`类型，可以存放所有类型的值，如何做到的?
+
+Go全局设置了这个:
+
+```go
+type any interface{}
+```
+
+`any`就是空接口`interface{}`的别名。空接口没有方法集，所有类型都实现这个接口，因为没有方法要实现嘛！很巧妙，是不是。
+
+我们知道，接口的零值是`nil`
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var a any // 声明一个a变量，它的类型是any 空接口
+	fmt.Println(a == nil)
+}
+```
+
+输出
+
+```
+true
+```
+
+## 5 接口占多少内存呢
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+func main() {
+	var a any = 1 // 声明一个空接口类型的变量
+	fmt.Println(unsafe.Sizeof(a))
+}
+```
+
+输出
+
+```
+16
+```
+
+其实，所有的接口都占16个字节，你也可以使用其他接口来尝试。为什么只占16个字节呢?我们来看看接口是怎么实现的。
+
+```go
+// 简化写法
+type interface struct {
+    typPtr unsafe.Pointer // 类型指针，指向实现该接口的类型信息，8byte
+    valPtr unsafe.Pointer // 值指针，指向实现该接口的值, 8byte
+}
+```
+
+根据结构体内存对齐的规则，接口占`8+8=16`个字节。
+
+以`a`为例
+```go
+var a any = 1
+```
+
+在内存中：
+
+![](@/public/images/any.svg)
+
+当然，接口的具体实现更为复杂，这里进行了简化帮助更好地理解。

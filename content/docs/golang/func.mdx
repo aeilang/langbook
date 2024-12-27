@@ -303,3 +303,32 @@ func main() {
  `n`是在`makeCounter()`函数里创建的，是`c`的外部变量。
 
 </Callout>
+
+### 2.4 函数占多少内存
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"unsafe"
+)
+
+// 新建一个sum函数
+func sum(a, b int) int {
+	return a + b
+}
+
+func main() {
+	// 使用unsafe包里的Sizeof函数打印sum变量占多少内存
+	fmt.Println(unsafe.Sizeof(sum))
+}
+```
+
+输出
+
+```
+8
+```
+
+你可以发现，函数类型的变量永远占8个字节的内存(64位系统)。很好理解，函数是引用类型，它本质上就是个指针，指向实际的函数。

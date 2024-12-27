@@ -4,55 +4,7 @@ title: 9.方法
 
 方法就是函数，但它是属于某一个类型。
 
-## 1. 结构体的方法
-
-结构体(类型)就像一个人， 他有姓名，年龄等属性(字段), 也会唱，跳和rap等技能(方法)。
-
-```go title="main.go"
-package main
-
-import "fmt"
-
-type person struct {
-	name string
-	age  int
-}
-
-// 唱
-func (p person) sing() { // [!code highlight]
-	fmt.Printf("%s 在跳\n", p.name)
-}
-
-// 跳
-func (p person) dance() { // [!code highlight]
-	fmt.Printf("%s 在唱\n", p.name)
-}
-
-// rap
-func (p person) rap() { // [!code highlight]
-	fmt.Printf("%s 在rap\n", p.name)
-}
-
-func main() {
-	p := person{
-		name: "lang",
-		age:  222,
-	}
-	p.sing() // [!code highlight]
-	p.dance()  // [!code highlight]
-	p.rap() // [!code highlight]
-}
-```
-
-运行，输出
-
-```
-lang 在跳
-lang 在唱
-lang 在rap
-```
-
-## 2. 方法的定义
+## 1. 方法的定义
 
 方法的语法为
 
@@ -115,7 +67,7 @@ func (i int) Output() string { // [!code highlight]
 
 但你可以给`int`起一个别名，给别名定义方法， 例如上一个例子。
 
-## 3. 值接受者和指针接受者:
+## 2. 值接受者和指针接受者:
 
 定义一个counter类型，它有一个值接收者的递增方法(increment)：
 
@@ -218,7 +170,7 @@ func increment(c *counter) {
 
 这就是指针接受者。当我们想改变`c`时，使用指针介绍者。或者当`c`内存占用很大时，我们使用指针接受者，减少函数传递时复制的开销，因为指针占用的内存永远是8个字节。
 
-## 4. 指针语法糖
+## 3. 指针语法糖
 
 不知道你注意没有，`counter`调用指针接受者是这样的：
 
@@ -306,3 +258,202 @@ Go帮我们自动解引用。
 ```
 
 为什么呢？因为`increment`传入的是值类型`counter`，而不是指针类型(*counter)。
+
+## 4. 结构体的方法
+
+结构体(类型)就像一个人， 他有姓名，年龄等属性(字段), 也会唱，跳和rap等技能(方法)。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type person struct {
+	name string
+	age  int
+}
+
+// 唱
+func (p person) sing() { // [!code highlight]
+	fmt.Printf("%s 在跳\n", p.name)
+}
+
+// 跳
+func (p person) dance() { // [!code highlight]
+	fmt.Printf("%s 在唱\n", p.name)
+}
+
+// rap
+func (p person) rap() { // [!code highlight]
+	fmt.Printf("%s 在rap\n", p.name)
+}
+
+func main() {
+	p := person{
+		name: "lang",
+		age:  222,
+	}
+	p.sing() // [!code highlight]
+	p.dance()  // [!code highlight]
+	p.rap() // [!code highlight]
+}
+```
+
+运行，输出
+
+```
+lang 在跳
+lang 在唱
+lang 在rap
+```
+
+## 5. 组合优于继承
+
+如何更好地复用代码呢？其他语言通过面向对象来实现，Go特立独行，使用组合来实现类似面向对象的功能。
+
+以上面的`person`结构体为例，如果我想在`person`的基础上创建新的结构体`smartPerson`，如何做呢？这时可以使用嵌套:
+
+```go title="main.go"
+type smartPerson struct {
+	person
+	iQ int
+}
+```
+
+嵌套结构体，这时不用使用字段名，直接把类型写入即可。`smartPerson`自己有一个`iQ`字段
+
+新的结构体可以访问person的字段和方法
+
+```go
+func main() {
+	p := person{
+		name: "lang",
+		age:  222,
+	}
+
+	sm := smartPerson{
+		person: p,
+		iQ:     100,
+	}
+
+	fmt.Println(sm.age)  // 222
+	fmt.Println(sm.name) // "lang"
+	sm.sing()            // lang 在跳
+	sm.dance()           // lang 在唱
+}
+```
+
+`smartPerson`也可以实现和`person`相同的方法
+
+```go
+func (sm smartPerson) sing() {
+	sm.person.sing()
+	fmt.Println("smartPerson 在唱")
+}
+```
+
+这时调用`sing()` 结果是哪个呢?
+
+```go
+func main() {
+	p := person{
+		name: "lang",
+		age:  222,
+	}
+
+	sm := smartPerson{
+		person: p,
+		iQ:     100,
+	}
+
+	sm.sing() 
+}
+```
+
+输出
+
+```
+lang 在跳
+smartPerson 在唱
+```
+
+是自身的`sing`方法。通过结构体的嵌套，我们可以“重写”被嵌入的结构体的方法。
+
+如果想调用被嵌套的`sing`方法，可以使用
+
+```go
+sm.person.sing()
+```
+
+指明字段
+
+运行，输出：
+
+```
+lang 在跳
+```
+
+好的。我们实现了类似“继承”的功能，但它是组合。组合优于继承!
+
+完整代码
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type person struct {
+	name string
+	age  int
+}
+
+// 唱
+func (p person) sing() { // [!code highlight]
+	fmt.Printf("%s 在跳\n", p.name)
+}
+
+// 跳
+func (p person) dance() { // [!code highlight]
+	fmt.Printf("%s 在唱\n", p.name)
+}
+
+type smartPerson struct {
+	person
+	iQ int
+}
+
+func (sm smartPerson) sing() {
+	sm.person.sing()
+	fmt.Println("smartPerson 在唱")
+}
+
+func main() {
+	p := person{
+		name: "lang",
+		age:  222,
+	}
+
+	sm := smartPerson{
+		person: p,
+		iQ:     100,
+	}
+
+	// 调用字段
+	fmt.Println(sm.age)  // 222
+	fmt.Println(sm.name) // "lang"
+	// 调用方法
+	sm.sing()  // lang 在跳
+	sm.dance() // lang 在唱
+}
+```
+
+输出
+
+```
+222
+lang
+lang 在跳
+smartPerson 在唱
+lang 在唱
+```
+

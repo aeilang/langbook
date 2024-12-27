@@ -1,3 +1,171 @@
 ---
 title: 11.错误处理
 ---
+
+特立独行的Go有不同的错误处理方式: 可能发生错误的地方返回一个错误。
+
+## 1. error的定义
+
+还是已打开文件为例，使用标准库`io`的函数`Open`打开一个文件：
+
+```go title="main.go"
+package main
+
+import (
+	"io"
+	"os"
+)
+
+func main() {
+	f, err := os.Open("go.mod")
+	if err != nil { // err != nil 说明有错误
+		panic(err) // 不想错了错了，直接panic让程序退出
+	}
+
+	// 打印到命令行
+	io.Copy(os.Stdout, f) // Stdout标准输出，即命令行
+}
+```
+
+输出
+
+```
+module github.com/aeilang/echo
+
+go 1.23.3
+```
+
+这里的err是`error`类型，`error`就是一个接口，和其他语言不同，Go中错误就是一个值。
+
+```go
+type error interface {
+    Error() string
+}
+```
+
+只要实现了这个`Error() string`方法就是一个错误。
+
+## 2. 实现一个error
+
+定义一个`MyError`结构体:
+
+```go
+type MyError struct {
+    Msg string
+}
+```
+
+新建一个New这个结构体的函数:
+
+```go
+func NewMyError(msg string) MyError {
+	return MyError{
+		Msg: msg,
+	}
+}
+```
+
+实现`Error() string`方法
+
+```go
+func (e MyError) Error() string {
+	return e.Msg
+}
+```
+
+创建一个除法函数，在除数为0时它返回错误:
+
+```go
+func Divide(a int, b int) (result int, err error) { // 使用命名返回值提高可读性
+	if b == 0 {
+		return 0, NewMyError("除数不能为0") //新建一个错误返回 // [!code highlight]
+	}
+
+	return a / b, nil // 没有错误，返回nil
+}
+```
+
+一个函数返回错误时，把错误放着最后面是一个好的习惯。
+
+好的，来调用这个函数
+
+```go 
+func main() {
+	result, err := Divide(10, 0)
+	if err != nil { // err != nil 表示有错误
+		panic(err) // 不想处理，直接panic，把程序终止。（不要在生产环境搞这种，哈哈。）
+	}
+	fmt.Println(result)
+}
+```
+
+完整代码:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type MyError struct {
+	Msg string
+}
+
+func NewMyError(msg string) MyError {
+	return MyError{
+		Msg: msg,
+	}
+}
+
+func (e MyError) Error() string {
+	return e.Msg
+}
+
+func Divide(a int, b int) (result int, err error) { // 使用命名返回值提高可读性
+	if b == 0 {
+		return 0, NewMyError("除数不能为0") //新建一个错误返回
+	}
+
+	return a / b, nil // 没有错误，返回nil
+}
+
+func main() {
+	result, err := Divide(10, 0)
+	if err != nil { // err != nil 表示有错误
+		panic(err) // 不想处理，直接panic，把程序终止。（不要在生产环境搞这种，哈哈。）
+	}
+	fmt.Println(result)
+}
+```
+
+输出
+
+```
+panic: 除数不能为0
+```
+
+这就是error的用法，一个函数可能发生错误，(就像打开文件，但文件不存在)，就返回`error` 。 `error`是一个接口，它的零值是`nil`， 如果`err == nil`就说明错误为空，就是没有错误；如果`err != nil`就说明错误不为空，就是有错误。设计得很巧妙对不对？
+
+实际过程中，我们使用标准库`errors`来新建一个错误：
+
+```go
+func Divide(a int, b int) (result int, err error) { 
+	if b == 0 {
+		return 0, err := errors.New("除数不能为0") // [!code highlight]
+	}
+
+	return a / b, nil // 没有错误，返回nil
+}
+```
+
+也可以使用`fmt`包来包裹错误
+
+```go
+func Divide(a int, b int) (result int, err error) { 
+	if b == 0 {
+		return 0, fmt.Errorf("错误不为零,而 b = %d", b) // [!code highlight]
+	}
+
+	return a / b, nil // 没有错误，返回nil
+}
+```
+
