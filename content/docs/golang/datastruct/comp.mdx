@@ -27,7 +27,34 @@ type myint int32
 
 </Callout>
 
-### 1.1 结构体占多少内存? [#much]
+### 1.1 结构体进行比较“==”
+
+结构体是可比较的，要求其字段都是可比的(不是切片，map, 函数类型)。同一个结构体类型才可比, 例如：
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type person struct {
+	age    int32
+	height int32
+}
+
+func main() {
+	p1 := person{age: 11, height: 160}
+	p2 := person{age: 11, height: 160}
+	fmt.Println(p1 == p2)
+}
+```
+
+输出
+
+```
+true
+```
+
+### 1.2 结构体占多少内存? [#much]
 
 ```go title="main.go"
 package main

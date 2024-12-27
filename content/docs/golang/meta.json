@@ -16,8 +16,8 @@
     "interface",
     "error",
     "generic",
-    "fmt",
     "file",
+    "fmt",
     "deped"
   ]
 }

@@ -169,3 +169,215 @@ func Divide(a int, b int) (result int, err error) {
 }
 ```
 
+## 3. errors包小解
+
+标准库`errors`包含了很多有用的处理错误的函数，我们已经接触了`New`函数用来新建一个错误
+
+```go
+err := errors.New("...出错")
+```
+
+设想一下这样一个错误的链路:
+
+`fooA`函数返回一个错误
+
+```go
+func fooA() error {
+	return errors.New("fooA出错")
+}
+```
+
+`fooB`函数调用`fooA`返回一个错误
+
+```go
+func fooB() error {
+	err := fooA()
+	return err
+}
+```
+
+`fooC`函数调用`fooB`返回一个错误
+
+```go
+func fooC() error {
+	err := fooB()
+	return err
+}
+```
+
+我们在`main`函数中调用`fooC`:
+
+```go title="main.go"
+func main() {
+	err := fooC()
+	fmt.Println(err)
+}
+```
+
+运行，输出
+
+```
+fooA出错
+```
+
+我们得到了底层的错误`fooA`出错，可是并不知道错误的链路。这时可以使用`fmt.Errorf`将错误包裹起来
+
+```go title="main.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+func fooA() error {
+	return errors.New("FooA出错")
+}
+
+func fooB() error {
+	err := fooA()
+	return fmt.Errorf("fooB: %v", err)  // [!code highlight]
+}
+
+func fooC() error {
+	err := fooB()
+	return fmt.Errorf("fooC: %v", err)  // [!code highlight]
+}
+
+func main() {
+	err := fooC()
+	fmt.Println(err)
+}
+```
+
+运行，输出
+
+```
+fooC: fooB: FooA出错
+```
+
+好的，错误的链路清晰了。
+
+有时，我们需要判断一个错误是不是特定的错误:
+
+新建一个特定错误, `fooA`返回这个错误
+
+```go
+var MyErr = errors.New("特定错误")
+
+func fooA() error {
+	return MyErr
+}
+```
+
+如果还采用上述的包裹方式，就无法判断原来的错误是不是特定错误,因为`fmt.Errorf()`返回的是一个新的错误，只是把原来的错误信息格式化成字符串加进去了。
+
+例如: 
+
+```go title="main.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var MyErr = errors.New("特定错误") // [!code highlight]
+
+func fooA() error {
+	return MyErr // [!code highlight]
+}
+
+func fooB() error {
+	err := fooA()
+	return fmt.Errorf("fooB: %v", err)
+}
+
+func fooC() error {
+	err := fooB()
+	return fmt.Errorf("fooC: %v", err)
+}
+
+func main() {
+	err := fooC()
+	fmt.Println(err)
+	fmt.Println(err == MyErr) // [!code highlight]
+}
+```
+
+输出
+
+```
+fooC: fooB: 特定错误
+false
+```
+
+输出为`false`， 因为这两个是不同的错误。
+
+在`fmt.Errorf`函数中使用`%w`动词进行包裹，这样原来的错误会保留在包裹的错误结构体中。
+
+例如:
+
+```go
+func fooB() error {
+	err := fooA()
+	return fmt.Errorf("fooB: %w", err) // [!code highlight]
+}
+```
+
+使用`errors.Is(err, target)`判断`err`中是否包裹有特定错误`target`
+
+```go
+func main() {
+	err := fooC()
+	fmt.Println(err)
+	fmt.Println(errors.Is(err, MyErr))  // [!code highlight]
+}
+```
+
+完整代码:
+
+```go title="main.go"
+package main
+
+import (
+	"errors"
+	"fmt"
+)
+
+var MyErr = errors.New("特定错误")
+
+func fooA() error {
+	return MyErr
+}
+
+func fooB() error {
+	err := fooA()
+	return fmt.Errorf("fooB: %w", err)  // [!code highlight]
+}
+
+func fooC() error {
+	err := fooB()
+	return fmt.Errorf("fooC: %w", err)  // [!code highlight]
+}
+
+func main() {
+	err := fooC()
+	fmt.Println(err)
+	fmt.Println(errors.Is(err, MyErr))  // [!code highlight]
+}
+```
+
+运行，输出
+
+```
+fooC: fooB: 特定错误
+true
+```
+
+结果是`true`。
+
+ errors.Is(err, target), 接收一个要判断的err, 和一个目标的错误，返回目标的错误是不是包裹在err中，如果是则返回`true`。
+
+这样我们就能打印错误的链路和判断是否包含特定的错误了。这些知识已经基本足够，更多的错误处理在另一本书`《Go标准库详解》`
+

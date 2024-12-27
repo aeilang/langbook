@@ -382,3 +382,52 @@ var a any = 1
 ![](@/public/images/any.svg)
 
 当然，接口的具体实现更为复杂，这里进行了简化帮助更好地理解。
+
+## 6. 接口进行比较
+
+接口是可比较的，要求实现该接口的类型不能是不可比较的类型(切片，map, 函数类型)。两个结构体是相等的，要求接口的动态类型(类型指针)，和动态值(值指针)都相等。
+
+1. 接口与`nil`进行比较
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var i interface{} = (*int)(nil) // 把nil转换成*int类型
+	fmt.Println(i == nil)
+}
+```
+
+输出
+
+```
+false
+```
+
+为什么不是`true`呢? `i`的值就是nil呀。接口与`nil`进行比较，要求接口的动态类型和动态值都是nil，但`i`的动态类型是`*int`, 所以不相等。
+
+2. 接口与接口进行比较
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	var i1 interface{} = int8(1) // i1的动态类型是int8，动态值是1
+	var i2 interface{} = int32(1) // i2的动态类型是int32, 动态值是1
+	fmt.Println(i1 == i2)
+}
+```
+
+输出
+
+```
+false
+```
+
+`i1`和`i2`动态类型不相等，所以`i1 != i2`
+
+只有两个接口的动态类型和动态值都相等，接口才相等。

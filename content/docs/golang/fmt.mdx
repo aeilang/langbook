@@ -1,3 +1,79 @@
 ---
-title: 12.fmt标准输入输出
+title: 13.fmt包
 ---
+
+标准库`fmt`是我们最常用到的格式化输入，输出工具。理解`fmt`包的常见用法是很重要的。
+
+## 1. 输出到命令行
+
+- `fmt.Println`，接收任意参数，打印到命令行并进行换行:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println(1, 2, "a", "b", "c")
+}
+```
+
+输出
+
+```
+1 2 a b c
+```
+
+打印结构体有自己默认的序列化为字符串的方法:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type person struct {
+	name string
+	age  int
+}
+
+func main() {
+	p := person{name: "lang", age: 11}
+	fmt.Println(p)
+}
+
+```
+
+输出
+
+```
+{lang 11}
+```
+
+你也可以自定义输出的内容，只要结构体实现了`String() string`方法，`fmt`包就优先调用该方法。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type person struct {
+	name string
+	age  int
+}
+
+func (p person) String() string {
+    return fmt.Sprintf("person{name = %s, age = %d}", p.name, p.age) // Sprintf 返回格式化后的字符串
+}
+
+func main() {
+	p := person{name: "lang", age: 11}
+	fmt.Println(p)
+}
+```
+
+输出
+
+```
+person{name = lang, age = 11}
+```
+

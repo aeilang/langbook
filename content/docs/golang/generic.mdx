@@ -1,3 +1,213 @@
 ---
 title: 12.泛型
 ---
+
+## 1. 为什么需要泛型?
+
+考虑一个求和函数`sum`
+
+```go
+func sum(a, b int) int {
+	return a + b
+}
+```
+
+如果参数是不同的类型，就需要写不同的函数，go中没有函数是一个变量，函数名不能一样:
+
+```go
+func sumInt32(a, b int32) int32 {
+	return a + b
+}
+
+func sumFloat64(a, b float64) float64 {
+	return a + b
+}
+```
+
+这样很耗费人力，逻辑也重复了。这时， 泛型就登场了。
+
+先定义一个泛型约束`Number` 限制`Number`必须是数值类型
+
+```go
+// 定义一个泛型约束，限制类型为所有数组类型
+type Number interface {
+	int | int8 | int16 | int32 | int64 |
+		uint | uint8 | uint16 | uint32 | uint64 |
+		float32 | float64
+}
+```
+
+定义泛型函数
+
+```go
+func sum[T Number](a, b T) T {
+	return a + b
+}
+```
+
+在函数名好使用泛型约束，`T Number]`， 表明T必须是数组类型。这样就可以传入各自数组类型了:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+// 定义一个泛型约束，限制类型为所有数字类型
+type Number interface {
+	int | int8 | int16 | int32 | int64 |
+		uint | uint8 | uint16 | uint32 | uint64 |
+		float32 | float64
+}
+
+func sum[T Number](a, b T) T {
+	return a + b
+}
+
+func main() {
+	fmt.Println(sum(1, 2))     // int 类型 // [!code highlight]
+	fmt.Println(sum(1.1, 1.2)) // float64类型 // [!code highlight]
+}
+```
+
+输出
+
+```
+3
+2.3
+```
+
+## 2. 泛型结构体
+
+我们实现一个先进后出的**栈**来说明。把栈想象成你洗的碗，碗是叠起来的，最下面的碗是第一个放进去的，但是是最后一个拿出来洗，这就是**先进后出**。
+
+定义一个栈结构体 `Stack`, 可以存放任意类型。
+
+```go
+type Stack[T any] struct {
+	elements []T
+}
+```
+
+泛型在结构体名称后面使用`[T any]`表明T可以是任意类型。它包含一个`[]T`类型的切片。
+
+创建一个新建这个栈的函数:
+
+```go
+func NewStack[T any]() *Stack[T] { // 返回指针使用同一个Stack[T]结构体
+	return &Stack[T]{
+		elements: make([]T, 0),
+	}
+}
+```
+
+实现入栈的方法`Push`，入栈就在切片结尾增加元素即可。
+
+```go
+func (s *Stack[T]) Push(e T) {
+	s.elements = append(s.elements, e)
+}
+```
+
+泛型结构体的方法如上写，因为结构体已经自带泛型`T`了。
+
+实现出栈的方法`Pop`：
+
+```go
+func (s *Stack[T]) Pop() (ele T, ok bool) {
+	length := len(s.elements) // 栈的长度
+
+	if length == 0 { // 长度为0，说明栈里没有元素，当然无法取出,返回false
+		return ele, false
+	}
+	ele = s.elements[length-1]         // 取出最后一个元素
+	s.elements = s.elements[:length-1] // 把最后一个元素删除
+	return ele, true
+}
+```
+
+好的，我们来调用一下:
+
+```go title="main.go"
+func main() {
+	stack := NewStack[int]() // 新建一个存放int类型的栈
+	stack.Push(1)            // 把1入栈
+	stack.Push(2)            // 把2入栈
+	fmt.Println(stack.Pop()) // 出栈
+	fmt.Println(stack.Pop()) // 出栈
+}
+```
+
+输出
+
+```
+2 true
+1 true
+```
+
+完整代码:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type Stack[T any] struct {
+	elements []T
+}
+
+func NewStack[T any]() *Stack[T] {
+	return &Stack[T]{
+		elements: make([]T, 0),
+	}
+}
+
+func (s *Stack[T]) Push(e T) { // 指针接收者
+	s.elements = append(s.elements, e)
+}
+
+func (s *Stack[T]) Pop() (ele T, ok bool) {
+	length := len(s.elements) // 栈的长度
+
+	if length == 0 { // 长度为0，说明栈里没有元素，当然无法取出,返回false
+		return ele, false
+	}
+	ele = s.elements[length-1]         // 取出最后一个元素
+	s.elements = s.elements[:length-1] // 把最后一个元素删除
+	return ele, true
+}
+
+func main() {
+	stack := NewStack[int]() // 新建一个存放int类型的栈
+	stack.Push(1)            // 把1入栈
+	stack.Push(2)            // 把2入栈
+	fmt.Println(stack.Pop()) // 出栈
+	fmt.Println(stack.Pop()) // 出栈
+}
+
+```
+
+## 3. 泛型接口
+
+有泛型结构体，当然就要泛型接口:
+
+我们给上面的栈抽象一个接口
+
+```go
+type Stacker[T any] interface {
+	Push(e T)
+	Pop() (ele T, ok bool)
+}
+```
+
+这就是泛型接口，也是把泛型约束`[T any]`放着接口名后面，表明`T`可以是任意类型。
+
+上面的`stack`实现了这个接口:
+
+```go
+func main() {
+	stack := NewStack[int]() // 新建一个存放int类型的栈
+
+	var _ Stacker[int] = stack // 使用_表明我们要丢弃这个变量，这里只是看看stack是否符合Stacker[int]这个接口
+}
+```
+

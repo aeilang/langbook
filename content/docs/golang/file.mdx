@@ -1,3 +1,625 @@
 ---
-title: 13.文件操作
+title: 12.文件io
 ---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+是我们经常使用`io`处理数据的输入和输出,例如文件的读取和写入，网络的请求和响应，输出到命令行，从命令行读取输入等。
+
+## 1. 经典的io接口
+
+Go 中使用最多的接口是`error`， 其次就是`io.Reader` 和 `io.Writer`。
+
+### 1.1 `io.Reader`的定义
+
+```go
+type Reader interface {
+    Read(p []byte) (n int, err error)
+}
+```
+
+`p`是一个字节切片，将数据放到`p`中，返回读取的字节个数`n`和过程中发生的错误`err`
+
+我们来实现一个`io.Reader`, 创建一个`MyReader`结构体：
+
+```go
+type MyReader struct {
+	i int    // 当前索引
+	s string // 实际的字符串
+}
+```
+
+创建一个New这个结构体的方法：
+
+```go
+func NewMyReader(s string) *MyReader {
+	return &MyReader{
+		i: 0, // 刚开始索引为0
+		s: s,
+	}
+}
+```
+
+实现`Read`方法:
+
+```go
+func (r *MyReader) Read(p []byte) (n int, err error) {
+	// r 中s的长度
+	if r.i >= len(r.s) { // 当前索引大于等于r.s的长度，说明读完了
+		return 0, io.EOF // io.EOF 是文件读完的标志, end of file
+	}
+	lenP := len(p)            // p切片的长度，表示能存入的byte个数
+	lenR := len(r.s[r.i:])    // r.s中从当前索引开始还有多少长度的byte没读
+	minLen := min(lenR, lenP) // 我们需要一个最小值，既不能超过lenR,也不能超过lenP
+	for idx := range minLen {
+		p[idx] = r.s[idx+r.i] // 将字节从r.s一个个复制到p
+	}
+	r.i += minLen // 将当前索引移动minLen步，已经读了minLen个字节了。
+
+	return minLen, nil
+}
+```
+
+你可以使用内置的`copy`函数把一个切片复制到另一个切片，返回复制的个数。既上述代码等价于:
+
+```go
+func (r *MyReader) Read(p []byte) (n int, err error) {
+	// r 中s的长度
+	lenR := len(r.s)
+	if r.i >= lenR { // 说明读完了
+		return 0, io.EOF // io.EOF 是文件读完的标志, end of file
+	}
+	n = copy(p, r.s[r.i:]) // 从r.i开始复制到p切片
+	r.i += n
+
+	return n, nil
+}
+```
+
+直接调用`io.Copy`它接收一个`io.Writer`和一个`io.Reader`， 把`io.Reader`的数据复制到`io.Writer`。来验证一下
+
+```go
+func main() {
+	mr := NewMyReader("hello world, my friend")
+
+	// os.Stdout 实现了io.Writer接口，标准输出，即打印到命令行
+	// mr 实现了io.Reader接口
+	io.Copy(os.Stdout, mr)
+}
+```
+
+运行
+
+```sh
+go run .
+```
+
+输出
+
+```
+hello world, my friend%   
+```
+
+完整代码:
+
+
+<Tabs items={["reader.go", "main.go"]}> 
+
+<Tab value="reader.go">
+
+```go tab
+package main
+
+import "io"
+
+type MyReader struct {
+	i int    // 当前索引
+	s string // 实际的字符串
+}
+
+func NewMyReader(s string) *MyReader {
+	return &MyReader{
+		i: 0, // 刚开始索引为0
+		s: s,
+	}
+}
+
+func (r *MyReader) Read(p []byte) (n int, err error) {
+	// r 中s的长度
+	lenR := len(r.s)
+	if r.i >= lenR { // 说明读完了
+		return 0, io.EOF // io.EOF 是文件读完的标志, end of file
+	}
+	n = copy(p, r.s[r.i:]) // 从r.i开始复制到p切片
+	r.i += n
+ 
+	return n, nil
+}
+```
+</Tab>
+<Tab value="main.go">
+
+```go tab
+package main
+
+import (
+	"io"
+	"os"
+)
+
+func main() {
+	mr := NewMyReader("hello world, my friend")
+
+	// os.Stdout 实现了io.Writer接口, 标准输出,即打印到命令行
+	// mr 实现了io.Reader接口
+	io.Copy(os.Stdout, mr)
+}
+```
+</Tab>
+</Tabs>
+
+
+
+上述的`MyReader`就是标准库`strings.Reader`的实现。
+
+### 1.2 `io.Writer`的定义
+
+```go
+type Writer interface {
+    Write(p []byte) (n int, err error)
+}
+```
+
+一个`Write`方法，它从`p`切片中拿出数据，返回拿出的`byte`的个数和过程中的错误。
+
+我们知道`os.Stdout` 是标准输出，即打印到命令行，同时实现了`io.Writer`接口。我们来实现一个`io.Writer`， 将字母变大写再打印到命令行:
+
+创建`MyWriter`结构体
+
+```go
+type MyWriter struct {
+	stdout io.Writer 
+}
+```
+
+创建New方法：
+
+```go
+func NewMyWriter(stdout io.Writer) *MyWriter {
+	return &MyWriter{stdout: stdout}
+}
+```
+
+实现`Write`方法,在这里将字母变大写。
+
+```go
+func (w *MyWriter) Write(p []byte) (n int, err error) {
+	p = bytes.ToUpper(p) // 标准库bytes把字母转换成大写
+
+	n, err = w.stdout.Write(p) // 调用stdout打印到标准输出
+	return n, err
+}
+```
+
+我们把上一节代码中的`os.Stdout`替换成`MyWriter`试验一下:
+
+```go
+func main() {
+	mr := NewMyReader("hello world, my friend")
+	mw := NewMyWriter(os.Stdout)
+
+	// mw 实现了io.Writer接口
+	// mr 实现了io.Reader接口
+	io.Copy(mw, mr)
+}
+```
+
+运行
+
+```sh
+go run .
+```
+
+输出
+
+```
+HELLO WORLD, MY FRIEND%
+```
+
+成功，完整代码：
+
+<Tabs items={["reader.go", "writer.go",  "main.go"]}> 
+
+<Tab value="reader.go">
+
+```go tab
+package main
+
+import "io"
+
+type MyReader struct {
+	i int    // 当前索引
+	s string // 实际的字符串
+}
+
+func NewMyReader(s string) *MyReader {
+	return &MyReader{
+		i: 0, // 刚开始索引为0
+		s: s,
+	}
+}
+
+func (r *MyReader) Read(p []byte) (n int, err error) {
+	// r 中s的长度
+	lenR := len(r.s)
+	if r.i >= lenR { // 说明读完了
+		return 0, io.EOF // io.EOF 是文件读完的标志, end of file
+	}
+	n = copy(p, r.s[r.i:]) // 从r.i开始复制到p切片
+	r.i += n
+ 
+	return n, nil
+}
+```
+</Tab>
+<Tab value="writer.go">
+
+```go tab
+package main
+
+import (
+	"bytes"
+	"io"
+)
+
+type MyWriter struct {
+	stdout io.Writer
+}
+
+func NewMyWriter(stdout io.Writer) *MyWriter {
+	return &MyWriter{stdout: stdout}
+}
+
+func (w *MyWriter) Write(p []byte) (n int, err error) {
+	p = bytes.ToUpper(p) // 标准库bytes把字母转换成大写
+
+	n, err = w.stdout.Write(p) // 调用stdout打印到标准输出
+	return n, err
+}
+```
+
+</Tab>
+
+<Tab value="main.go">
+
+```go tab
+package main
+
+import (
+	"io"
+	"os"
+)
+
+func main() {
+	mr := NewMyReader("hello world, my friend")
+	mw := NewMyWriter(os.Stdout)
+
+	// mw 实现了io.Writer接口
+	// mr 实现了io.Reader接口
+	io.Copy(mw, mr)
+}
+```
+</Tab>
+</Tabs>
+
+### 1.3 实现io.Copy
+
+既然都实现到这了，就再实现一个**简单**的`io.Copy`吧。它将数据从`io.Reader`复制到`io.Writer`。（完整的实现还得看标准库）
+
+```go title="copy.go"
+package main
+
+import "io"
+
+func MyCopy(dst io.Writer, src io.Reader) (writen int, err error) {
+	var totalBytes int        // 总共写入了多少字节
+	buf := make([]byte, 1024) // 每次读取 1KB
+
+	for {
+		// 从 src 中读取数据
+		n, readErr := src.Read(buf)
+		if n > 0 { // n 是读取到的字节数
+			// 将读取的数据写入到 dst
+			written, writeErr := dst.Write(buf[:n])
+			if writeErr != nil { // 写入时出错,返回
+				return totalBytes, writeErr
+			}
+			totalBytes += written // 将写入的字节数加到总字节数
+		}
+
+		// 如果读取遇到 EOF，表示结束
+		if readErr == io.EOF {
+			break // 中断for循环
+		}
+
+		// 如果读取出错，返回错误
+		if readErr != nil {
+			return totalBytes, readErr
+		}
+	}
+
+	return totalBytes, nil
+}
+```
+
+将`io.Copy`替换成`MyCopy`
+
+```go title="main.go"
+func main() {
+	mr := NewMyReader("hello world, my friend")
+	mw := NewMyWriter(os.Stdout)
+
+	// mw 实现了io.Writer接口
+	// mr 实现了io.Reader接口
+	MyCopy(mw, mr)
+}
+```
+
+运行
+
+```sh
+go run .
+```
+
+输出
+
+```
+HELLO WORLD, MY FRIEND%  
+```
+
+成功，
+
+完整代码
+
+<Tabs items={["reader.go", "writer.go", "copy.go", "main.go"]}> 
+
+<Tab value="reader.go">
+
+```go tab
+package main
+
+import "io"
+
+type MyReader struct {
+	i int    // 当前索引
+	s string // 实际的字符串
+}
+
+func NewMyReader(s string) *MyReader {
+	return &MyReader{
+		i: 0, // 刚开始索引为0
+		s: s,
+	}
+}
+
+func (r *MyReader) Read(p []byte) (n int, err error) {
+	// r 中s的长度
+	lenR := len(r.s)
+	if r.i >= lenR { // 说明读完了
+		return 0, io.EOF // io.EOF 是文件读完的标志, end of file
+	}
+	n = copy(p, r.s[r.i:]) // 从r.i开始复制到p切片
+	r.i += n
+ 
+	return n, nil
+}
+```
+</Tab>
+<Tab value="writer.go">
+
+```go tab
+package main
+
+import (
+	"bytes"
+	"io"
+)
+
+type MyWriter struct {
+	stdout io.Writer
+}
+
+func NewMyWriter(stdout io.Writer) *MyWriter {
+	return &MyWriter{stdout: stdout}
+}
+
+func (w *MyWriter) Write(p []byte) (n int, err error) {
+	p = bytes.ToUpper(p) // 标准库bytes把字母转换成大写
+
+	n, err = w.stdout.Write(p) // 调用stdout打印到标准输出
+	return n, err
+}
+```
+
+</Tab>
+
+<Tab value="copy.go">
+
+```go tab
+package main
+
+import "io"
+
+func MyCopy(dst io.Writer, src io.Reader) (writen int, err error) {
+	var totalBytes int        // 总共写入了多少字节
+	buf := make([]byte, 1024) // 每次读取 1KB
+
+	for {
+		// 从 src 中读取数据
+		n, readErr := src.Read(buf)
+		if n > 0 { // n 是读取到的字节数
+			// 将读取的数据写入到 dst
+			written, writeErr := dst.Write(buf[:n])
+			if writeErr != nil { // 写入时出错,返回
+				return totalBytes, writeErr
+			}
+			totalBytes += written // 将写入的字节数加到总字节数
+		}
+
+		// 如果读取遇到 EOF，表示结束
+		if readErr == io.EOF {
+			break // 中断for循环
+		}
+
+		// 如果读取出错，返回错误
+		if readErr != nil {
+			return totalBytes, readErr
+		}
+	}
+
+	return totalBytes, nil
+}
+```
+
+</Tab>
+
+<Tab value="main.go">
+
+```go tab
+package main
+
+import (
+	"io"
+	"os"
+)
+
+func main() {
+	mr := NewMyReader("hello world, my friend")
+	mw := NewMyWriter(os.Stdout)
+
+	// mw 实现了io.Writer接口
+	// mr 实现了io.Reader接口
+	io.Copy(mw, mr)
+}
+```
+</Tab>
+</Tabs>
+
+## 2. 文件操作
+
+### 2.1 创建和写入文件
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+	file, err := os.Create("hello.md") // 在当前目录创建`hello.md`的文件
+	if err != nil { // 创建发生错误直接退出
+		fmt.Println("错误", err)
+		return
+	}
+
+	defer file.Close() // 一定记得defer 关闭文件，释放资源
+
+	// file 实现了io.Writer, 有write方法， 直接写入
+	file.Write([]byte("hello world"))
+}
+```
+
+运行，可以看到生成了`hello.md`文件，内容为
+
+```
+hello world
+```
+
+注意事项，`file`不是线程安全的，并发访问时需要加锁控制，例如:
+
+```go
+func WriteToFile(file io.Writer, data []byte) (n int, err error) {
+	mu.Lock() // 加锁保护
+	n, err = file.Write(data)
+	mu.Unlock() // 解锁
+	return n, err
+}
+```
+
+### 2.2 读取文件
+
+我们来读取刚刚创建的`hello.md`文件
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+)
+
+func main() {
+	// 打开该文件
+	file, err := os.Open("hello.md")
+	if err != nil { // 打开时发生错误
+		panic(err) // 不想处理了，直接panic终止程序,生产环境勿用
+	}
+
+	defer file.Close() // 一定记得defer 关闭文件，释放资源
+
+	io.Copy(os.Stdout, file) // 将文件打印到命令行 stdout
+}
+```
+
+输出
+
+```
+hello world%
+```
+
+### 2.3 读取大文件
+
+如果一个文件很大，一次性读取可能会把内存挤爆，我们需要分快读取:
+
+```go
+package main
+
+import (
+	"io"
+	"os"
+)
+
+func main() {
+	// 打开该文件, 假设这个文件很大
+	file, err := os.Open("hello.md")
+	if err != nil { // 打开时发生错误
+		panic(err) // 不想处理了，直接panic终止程序,生产环境勿用
+	}
+
+	defer file.Close() // 一定记得defer 关闭文件，释放资源
+
+	buf := make([]byte, 4096) // 每次最多读取4k个byte,缓冲
+
+	for {
+		n, err := file.Read(buf) // file实现了io.Reader, 有Read方法，读取数据到buf切片中
+		if err == io.EOF {       // 读完了，没什么可读的了
+			break // 退出for循环
+		}
+
+		if err != nil { // 如果err还不为nil, 说明读取过程中发生错误
+			panic(err) // 直接panic，终止程序，生成环境勿用，返回错误即可
+		}
+
+		os.Stdout.Write(buf[:n]) // 将读到的数据打印到命令行。
+	}
+}
+```
+
+输出
+
+```
+hello world% 
+```
+
