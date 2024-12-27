@@ -1,3 +1,345 @@
 ---
 title: 8.defer
 ---
+
+`defer`是Go的特有发明，常用来执行文件关闭等资源清理的工作。
+
+## 1. 资源清理:
+
+```go title="main.go"
+package main
+import (
+	"io"
+	"os"
+)
+func main() {
+	f, err := os.Open("go.mod")
+	if err != nil {
+		panic(err)
+	}
+
+	defer f.Close() // 在main函数退出前执行。
+
+	io.Copy(os.Stdout, f) // 输出到命令行
+}
+
+```
+
+`defer`将 `f.Close()`函数延迟到`main`函数退出前才执行。
+
+## 2. defer 的原理
+
+`defer` 会把要延迟运行的函数放到一个栈里(先进后出)， 在`defer`所在的函数运行结束后再从栈里一个个拿出来运行。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	defer func() {
+		fmt.Println(1)
+	}()
+
+	defer func() {
+		fmt.Println(2)
+	}()
+
+	defer func() {
+		fmt.Println(3)
+	}()
+}
+```
+
+输出
+```
+3
+2
+1
+```
+
+多个`defer`语句是放在`栈`中，在`main`函数退出前从栈中(先进后出)一个个取出运行。
+
+`defer`延迟的函数什么时候运行? 在**`defer`所在的函数** 退出前运行。
+
+```go title = main.go
+package main
+
+import "fmt"
+
+func foo() {
+	defer func() {
+		fmt.Println(1)
+	}()
+
+	defer func() {
+		fmt.Println(2)
+	}()
+
+	defer func() {
+		fmt.Println(3)
+	}()
+
+}
+
+func main() {
+	foo()
+	fmt.Println("main")
+}
+```
+
+输出
+
+```
+3
+2
+1
+main
+```
+
+你能说说为什么会是这个结果吗?
+
+## 3. recover
+
+defer 所在函数`panic`后，仍然可以执行`defer` 延迟的函数。
+
+```go title="main.go"
+package main
+import "fmt"
+func foo() {
+	defer func() {
+		fmt.Println(1)
+	}()
+
+	defer func() {
+		fmt.Println(2)
+	}()
+
+	defer func() {
+		fmt.Println(3)
+	}()
+
+	panic("噢噢 坏事发生了!")
+
+}
+
+func main() {
+	foo()
+	fmt.Println("main")
+}
+```
+
+输出
+
+```
+3
+2
+1
+panic: 噢噢 坏事发生了!
+```
+
+能输出3,2,1但打印不了`main`了，因为`panic`从`foo`函数传到上层的`main`函数，`main`函数就立刻退出了。
+
+在 defer 中使用`recover`捕获`panic`，使得程序继续运行(恢复)
+
+```go title="main.go"
+package main
+import "fmt"
+func foo() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(r)
+		}
+	}()
+
+	defer func() {
+		fmt.Println(1)
+	}()
+
+	defer func() {
+		fmt.Println(2)
+	}()
+
+	defer func() {
+		fmt.Println(3)
+	}()
+
+	panic("噢噢 坏事发生了!")
+
+}
+
+func main() {
+	foo()
+	fmt.Println("main")
+}
+```
+
+输出
+
+```
+3
+2
+1
+噢噢 坏事发生了!
+main
+```
+
+`foo`函数的`panic` 被`recover`捕获到了，没有继续传导到main函数，函数继续运行，打印`main`
+
+注意, `recover`必须在`defer` 语句中使用，因为`defer`在程序panic时仍会运行。
+
+`recover()`返回的是`any`类型，即引发`panic`的原因， 也就是`panic()`传进去的类型，在本例中是string: `"噢噢 坏事发生了!"`。
+
+## 4. 常见错误
+
+1. 在循环中使用panic:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+// 模拟文件打开和关闭
+func open(file string) (close func()) {
+	return func() {
+		fmt.Printf("%s 关闭成功\n", file)
+	}
+}
+
+func main() {
+	for i := range 5 {
+		close := open(fmt.Sprintf("%d文件", i))
+		defer close()
+	}
+}
+```
+
+输出
+
+```
+4文件 关闭成功
+3文件 关闭成功
+2文件 关闭成功
+1文件 关闭成功
+0文件 关闭成功
+```
+
+我们希望文件用完就关闭，而不是等待main函数退出是再关闭。使用一个匿名函数套住`defer`
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+// 模拟文件打开和关闭
+func open(file string) (close func()) {
+	return func() {
+		fmt.Printf("%s 关闭成功\n", file)
+	}
+}
+
+func main() {
+	for i := range 5 {
+		func() {
+			close := open(fmt.Sprintf("%d文件", i))
+			defer close()
+		}()
+	}
+}
+```
+
+输出
+```
+0文件 关闭成功
+1文件 关闭成功
+2文件 关闭成功
+3文件 关闭成功
+4文件 关闭成功
+```
+
+每次循环结束匿名函数退出前触发`defer`语句。
+
+2. defer函数的参数在声明时就验证
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	a := 1
+	defer func(num int) {
+		fmt.Println(num)
+	}(a)
+
+	a = 2
+}
+```
+
+函数该打印1, 还是2呢?
+
+运行，输出
+
+```
+1
+```
+
+原因是`defer`语句声明时就进行验证，此时`a`=1
+
+如果是下面代码，会发送什么?
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	a := 1
+	defer func() {
+		fmt.Println(a)
+	}()
+
+	a = 2
+}
+```
+
+输出
+
+```
+2
+```
+
+原因是只有参数进行验证。上述的defer后面函数是一个闭包，引用了外部变量`a`， 在函数退出时， `a = 2` 所以打印2。
+
+3. defer 与命名返回值
+
+考虑下列代码，会输出什么？
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func bar() (num int) {
+	defer func() {
+		num = 3
+	}()
+
+	num = 1
+	return 2
+}
+
+func main() {
+	fmt.Println(bar())
+}
+```
+
+是输出1，2还是3呢？
+
+运行，输出
+```
+3
+```
+
+为什么呢？ `return 2`相当于`num = 2`， 之后`defer`函数运行，`num = 3`， 所以返回3。defer 可以改变函数 `return `后的命名返回值。
+

@@ -135,7 +135,7 @@ can only use ... with final parameter in list
 
 函数是一等公民，意味着函数和其他数据类型（如整型、字符串等）一样。你可以把函数赋值给变量、作为参数传递给其他函数，或者作为函数的返回值。
 
-### 2.1 匿名函数
+### 2.1 把函数赋值给变量
 
 你可以像创建变量一样来创建一个函数：
 
@@ -181,6 +181,30 @@ func main() {
 2
 4
 ```
+
+<Callout title="匿名函数">
+
+没有名字的函数就叫匿名函数，例如定义函数时直接运行:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	func(a, b int) {
+		fmt.Println(a + b)
+	}(1, 2) // 匿名函数，直接运行
+}
+```
+
+输出
+
+```
+3
+```
+
+</Callout>
 
 函数是引用类型，它的零值是`nil`:
 
