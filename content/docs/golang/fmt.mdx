@@ -2,11 +2,11 @@
 title: 13.fmt包
 ---
 
-标准库`fmt`是我们最常用到的格式化输入，输出工具。理解`fmt`包的常见用法是很重要的。
+标准库`fmt`是我们最常用到的格式化输入，输出工具。
 
-## 1. 输出到命令行
+## 1. Println函数
 
-- `fmt.Println`，接收任意参数，打印到命令行并进行换行:
+`fmt.Println`，接收任意参数，打印到命令行并进行换行:
 
 ```go title="main.go"
 package main
@@ -77,3 +77,243 @@ func main() {
 person{name = lang, age = 11}
 ```
 
+## 2. Printf函数
+
+使用`fmt.Printf`和动词占位符进行更精细化的格式化操作。
+
+- 打印`string`类型, 使用`%s`动词
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	name := "lang"
+	fmt.Printf("name: %s\n", name) // /n是换行符 // [!code highlight]
+}
+```
+
+输出
+
+```
+name: lang
+```
+
+- 打印整数类型，使用`%d`动词, `d` 是 **decimal** 的缩写，表示十进制整数
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	age := 110
+	fmt.Printf("age: %d\n", age) // [!code highlight]
+}
+```
+
+输出
+
+```
+age: 110
+```
+
+- 浮点数类型，使用`%f` 动词
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	money := 2.1252
+	fmt.Printf("money: %f\n", money)   //标准输出  // [!code highlight]
+	fmt.Printf("money: %.2f\n", money) // 保留两位小数,四舍五入  // [!code highlight]
+}
+```
+
+输出
+
+```
+money: 2.125200
+money: 2.13
+```
+
+- 布尔类型, 使用`%t`动词
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	isTrue := true
+	fmt.Printf("isTrue: %t\n", isTrue) // [!code highlight]
+}
+```
+
+输出
+
+```
+isTrue: true
+```
+
+- 指针类型，使用`%p`动词，打印指针地址
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	isTrue := true
+	var ptr *bool = &isTrue 
+	fmt.Printf("pointer: %p\n", ptr) // [!code highlight]
+}
+```
+
+输出
+
+```
+pointer: 0xc0000a200b
+```
+
+- 任意类型，使用`%v`动词，go会选择适合的格式化方式
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type person struct {
+	name string
+	age  int
+}
+
+func main() {
+	p := person{name: "lang", age: 11}
+	fmt.Printf("p: %v\n", p)  // %v 默认格式
+	fmt.Printf("p: %+v\n", p) // %+v 包含字段名
+	fmt.Printf("p: %#v\n", p) // %#v 打印p的源代码格式
+}
+```
+
+输出
+
+```
+p: {lang 11}
+p: {name:lang age:11}
+p: main.person{name:"lang", age:11}
+```
+
+## 3. 格式化动词一览表（记住上面的就好，下面的当资料查看）
+
+1. **通用格式化动词，输出默认格式**
+
+| 动词  | 描述                                   |
+| ----- | -------------------------------------- |
+| `%v`  | 按值的默认格式输出。                   |
+| `%+v` | 类似 `%v`，但结构体会包含字段名。      |
+| `%#v` | 值的 Go 语法表示形式（即源代码格式）。 |
+| `%T`  | 打印值的类型。                         |
+| `%%`  | 字面百分号。                           |
+
+2. **布尔类型**
+
+| 动词 |             描述              | 
+| ---- | ------------------------ | 
+| `%t` | 输出 `true` 或 `false`。 |      
+
+3. **整数类型**
+
+| 动词 | 描述                          |
+| ---- | ----------------------------- |
+| `%b` | 二进制表示。                  |
+| `%c` | 相应 Unicode 码点的字符。     |
+| `%d` | 十进制表示。                  |
+| `%o` | 八进制表示。                  |
+| `%x` | 十六进制（小写字母）。        |
+| `%X` | 十六进制（大写字母）。        |
+| `%U` | Unicode 格式，例如 `U+1234`。 |
+
+4. **浮点数和复数**
+
+| 动词   | 描述                            |
+| ------ | ------------------------------- |
+| `%e`   | 科学计数法（小写）。            |
+| `%E`   | 科学计数法（大写）。            |
+| `%f`   | 标准浮点数表示。                |
+| `%.nf` | 指定精度，`n` 为小数位数。      |
+| `%g`   | 根据数值选择使用 `%e` 或 `%f`。 |
+| `%G`   | 根据数值选择使用 `%E` 或 `%f`。 |
+
+5. **字符串和字节切片**
+
+| 动词 | 描述                                       |
+| ---- | ------------------------------------------ |
+| `%s` | 字符串或字节切片的内容（原样输出）。       |
+| `%q` | 双引号括起来的字符串（转义特殊字符）。     |
+| `%x` | 每字节以两字符的十六进制表示（小写字母）。 |
+| `%X` | 每字节以两字符的十六进制表示（大写字母）。 |
+
+6. **指针**
+
+| 动词 | 描述                             |
+| ---- | -------------------------------- |
+| `%p` | 十六进制表示的指针值（内存地址） |
+
+## 4. Sprintf，Sprintln函数
+
+与`Printf`, `Println`相同，不同的是将字符串返回，而不是打印到命令行:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	name := "lang"
+	str1 := fmt.Sprintln(name)              // 返回字符串 // [!code highlight]
+	str2 := fmt.Sprintf("name: %s\n", name) // 返回字符串 // [!code highlight]
+	fmt.Print(str1)
+	fmt.Print(str2)
+}
+```
+
+输出
+
+```
+lang
+name: lang
+```
+
+## 5. Fprintf, Fprintln函数
+
+与`Printf`, `Println`相同，不同的是将结果写入`io.Writer`，而不是打印到命令行(`os.Stdout`)
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+	"os"
+)
+
+func main() {
+	name := "lang"
+
+	// os.Stdout 实现了`io.Writer` 接口
+	fmt.Fprintln(os.Stdout, name)              // 指定输出到标准输出,命令行 // [!code highlight]
+	fmt.Fprintf(os.Stdout, "name: %s\n", name) // 知道输出到标准输出，命令行 // [!code highlight]
+}
+```
+
+输出
+
+```
+lang
+name: lang
+```
+
+你也可以指定其他`io.Wrtier`接口的实现，例如输出到文件(`*os.File`), http响应(`http.ResponseWriter`)等。

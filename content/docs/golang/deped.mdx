@@ -1,3 +1,366 @@
 ---
 title: 14.依赖管理
 ---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
+
+终于来到了实战前的最后一章，本章将介绍，如何上传自己的包供他人使用，如何下载第三方包。
+
+## 1. 上传一个自己的包`mymath`
+
+1. 新建一个`mymath`文件夹,并进入该文件夹,用`vscode`打开，再打开`vscode`的终端
+
+```sh
+mkdir mymath
+cd mymath
+```
+
+2. 使用`go mod init`初始化一个go项目
+
+```sh
+go mod init github.com/aeilang/mymath
+```
+
+把`aeilang`换成自己的账户名，其他的不变，mymath是模块名，即包名，但要和所在文件夹名`mymath`相同
+
+会生成一个`go.mod`文件，记录模块名，和版本信息，以及将来的依赖信息
+
+```go title="go.mod"
+module github.com/aeilang/mymath
+
+go 1.23.3
+```
+
+3. 创建一个`math.go`文件，并写入如下代码
+
+```go title="math.go"
+package mymath
+
+// 首字母大小，别的包要用，必须可导出。
+func Sum(a, b int) int {
+	return a + b
+}
+```
+最终目录如下：
+
+```
+mymath
+├── go.mod
+└── math.go
+```
+
+
+4. 初始化`git`项目
+
+```sh
+git init
+```
+
+5. 去`github`创建同名仓库`mymath`, 复制仓库地址:
+
+我的仓库地址是`https://github.com/aeilang/mymath.git`
+
+6. 增加origin远程地址:
+
+如果你的`git`主分支名字是`master`，使用`git branch -M main` 把主分支重命名成`main`。
+
+执行以下命令，添加远程仓库
+
+```sh
+git remote add origin https://github.com/aeilang/mymath.git
+```
+
+7. 推送你的代码
+
+```sh
+git add . # 增加到暂存区
+git commit -m "init" # 提交到本地仓库
+git push origin main # 推送到远程仓库
+```
+
+OK！  别人以及可以开始使用你的包。
+
+## 2. 下载第三方包
+
+好的，我们现在就下载刚刚上传的包试试。
+
+和上面一样，新建一个`mytest`文件夹, 使用`vscode`打开。
+
+再初始化一个go项目
+
+```sh
+go mod init github.com/aeilang/mytest
+```
+
+使用`go get 仓库地址`命令下载你刚上传的包 `mymath`
+
+```sh
+go get github.com/aeilang/mymath # aeilang换成你的github账户名
+```
+
+新建一个`main.go`文件，写入如下内容
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+
+	"github.com/aeilang/mymath"
+)
+
+func main() {
+	result := mymath.Sum(1, 2)
+	fmt.Println(result)
+}
+```
+
+最终目录如下:
+
+```
+mytest
+├── go.mod
+├── go.sum
+└── main.go
+```
+
+运行`go run main.go`，输出
+
+```
+3
+```
+
+欧耶，你已经学会了如何上传一个包供他人使用，和如何下载第三方包供自己使用！
+
+## 3. 本地开发协作
+
+有时，你不想公开你的包，但你有一个项目依赖另一个项目，这时，就可以使用`go work`来协作了！
+
+创建一个`work`文件夹，并用`vscode`打开。
+
+在`work`文件夹里分别初始化两个go项目。目录结构如下: (文件夹名字随意)
+
+```
+work
+├── myrand
+│   └── go.mod
+└── mytest
+    └── go.mod
+
+```
+
+在`work`文件夹中打开终端, 执行
+
+```sh
+go work init ./myrand ./mytest
+```
+
+可以看到，在work文件夹中生成了`go.work`文件。
+
+```go title="go.work"
+go 1.23.3
+
+use (
+	./myrand
+	./mytest
+)
+```
+
+OK! 现在，两个项目可以协调工作了，例如`mytest`项目引用`myrand`包里的代码。试验一下
+
+新建`rand.go` 和 `main.go`文件，最终目录如下
+
+```sh
+work
+├── go.work
+├── myrand
+│   ├── go.mod
+│   └── rand.go
+└── mytest
+    ├── go.mod
+    └── main.go
+```
+
+在`myrand/rand.go`中写入如下代码
+
+```go title="myrand/rand.go"
+package myrand
+
+func Sum(a, b int) int {
+	return a + b
+}
+```
+
+在`mytest/main.go`中引用`myrand`包，写入如下内容
+
+```go title=“mytest/main.go”
+package main
+
+import (
+	"fmt"
+
+	"github.com/aeilang/myrand"
+)
+
+func main() {
+	result := myrand.Sum(1, 1)
+	fmt.Println(result)
+}
+```
+
+运行`go run main.go`
+
+输出
+
+```
+2
+```
+
+成功！
+
+## 4. 项目初始化的流程
+
+写到最后忘了讲go项目初始化的流程了，在这里补上吧。
+
+### 4.1 init函数
+
+和`main`函数一样，`init`函数没有输入，也没有输出; 和`main`函数不一样，`main函数`在`main包`中有且只有一个， `init`函数可以在任何包里有任意多个。
+
+### 4.2 初始化流程
+
+一下面的test项目为例, 目录结构
+
+```
+test
+├── bar
+│   └── bar.go
+├── foo
+│   └── foo.go
+├── go.mod
+└── main.go
+```
+
+代码如下:
+
+<Tabs items={['bar/bar.go', 'foo/foo.go', 'main.go']}> 
+
+ <Tab value="bar/bar.go">
+
+```go tab
+package bar
+
+import "fmt"
+
+// init函数
+func init() {
+	fmt.Println("bar init")
+}
+
+// 变量
+var a = func() int {
+	fmt.Println("bar包的变量a 初始化")
+	return 1
+}()
+
+// 常量
+const pi = 3.14
+
+func Bar() {
+	fmt.Println("bar")
+}
+```
+
+</Tab>  
+
+<Tab value="foo/foo.go">
+
+```go tab
+package foo
+
+import "fmt"
+
+// init函数
+func init() {
+	fmt.Println("foo init")
+}
+
+// 变量
+var a = func() int {
+	fmt.Println("foo包的变量a 初始化")
+	return 1
+}()
+
+// 常量
+const pi = 3.14
+
+func Foo() {
+	fmt.Println("foo")
+}
+```
+
+</Tab>
+
+<Tab value="main.go">
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+
+	"github.com/aeilang/test/bar"
+	"github.com/aeilang/test/foo"
+)
+
+// init函数
+func init() {
+	fmt.Println("main init")
+}
+
+// 变量
+var a = func() int {
+	fmt.Println("main包的变量a 初始化")
+	return 1
+}()
+
+// 常量
+const pi = 3.14
+
+func main() {
+	foo.Foo()
+	bar.Bar()
+}
+```
+
+</Tab>
+
+</Tabs>
+
+三个包分别定义了`init函数`, 相关的变量和常量，其中`main`包依赖`foo`和`bar`包。每个包的变量`a`初始化时都打印对应的信息，因为常量是在编译器确定的，无法观察期初始化的过程。
+
+运行
+
+```sh
+go run main.go
+```
+
+输出
+
+```
+bar包的变量a 初始化
+bar init
+foo包的变量a 初始化
+foo init
+main包的变量a 初始化
+main init
+foo
+bar
+```
+
+初始化流程为，
+
+- go会优先初始化依赖包，按照**深度优先**的顺序初始化,如果依赖包还依赖其他包，会优先初始化其他包。
+- 包内初始化的顺序： 先初始化常量(编译器完成) -> 再初始化全局变量 -> 最后运行`init函数`
+- `main包`的`main`函数是程序的入口，最后会执行`main`函数。
+
+![](@/public/images/flow.svg)
