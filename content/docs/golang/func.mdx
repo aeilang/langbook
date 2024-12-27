@@ -17,7 +17,7 @@ func sum(a int, b int) int {
 当多个参数类型一样时，可以省略前面参数的类型:
 
 ```go
-func sum(a, b int) int {
+func sum(a, b int) int { // [!code highlight]
 	return a + b
 }
 ```
@@ -25,7 +25,7 @@ func sum(a, b int) int {
 函数可以有多个返回值，我们来写一个求商和余数的函数：
 
 ```go
-func divideAndMod(dividend, divisor int) (int, int) {
+func divideAndMod(dividend, divisor int) (int, int) { 
 	return dividend / divisor, dividend % divisor
 }
 ```
@@ -52,7 +52,7 @@ func divideAndMod(dividend, divisor int) (quotient, remainder int) {
 func divideAndMod(dividend, divisor int) (quotient, remainder int) {
 	quotient = dividend / divisor // '=' 赋值操作
 	remainder = dividend % divisor
-    return
+    return // [!code highlight]
 }
 ```
 
@@ -69,7 +69,7 @@ func divideAndMod(dividend, divisor int) (quotient, remainder int) {
 上面的`sum`函数只能求两个数的和。如何求一组数的和呢？
 
 ```go
-func sum(nums ...int) int {
+func sum(nums ...int) int { // [!code highlight]
 	result := 0
 	// nums 是[]int类型
 	for _, v := range nums {
@@ -111,7 +111,7 @@ func main() {
 例如，这样写是错误的
 
 ```go
-func sum(nums ...int, a int) int { // 
+func sum(nums ...int, a int) int { // [!code highlight]
 	result := 0
 	// nums 是[]int类型
 	for _, v := range nums {
@@ -161,12 +161,12 @@ package main
 import "fmt"
 
 func sum2(a, b int) int { // 创建函数sum2
-	return a + b + 2
+	return a + b + 2 // [!code highlight]
 }
 
 func main() {
 	sum := func(a, b int) int {
-		return a + b
+		return a + b // [!code highlight]
 	}
 	fmt.Println(sum(1, 1))
 
@@ -214,7 +214,7 @@ package main
 import "fmt"
 
 // 给类型起一个别名
-type myFunc func(int, int) int
+type myFunc func(int, int) int 
 
 func main() {
 	var sum myFunc // 函数类型的零值是nil

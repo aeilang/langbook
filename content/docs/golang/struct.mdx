@@ -1,3 +1,308 @@
 ---
-title: 9.方法与结构体
+title: 9.方法
 ---
+
+方法就是函数，但它是属于某一个类型。
+
+## 1. 结构体的方法
+
+结构体(类型)就像一个人， 他有姓名，年龄等属性(字段), 也会唱，跳和rap等技能(方法)。
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type person struct {
+	name string
+	age  int
+}
+
+// 唱
+func (p person) sing() { // [!code highlight]
+	fmt.Printf("%s 在跳\n", p.name)
+}
+
+// 跳
+func (p person) dance() { // [!code highlight]
+	fmt.Printf("%s 在唱\n", p.name)
+}
+
+// rap
+func (p person) rap() { // [!code highlight]
+	fmt.Printf("%s 在rap\n", p.name)
+}
+
+func main() {
+	p := person{
+		name: "lang",
+		age:  222,
+	}
+	p.sing() // [!code highlight]
+	p.dance()  // [!code highlight]
+	p.rap() // [!code highlight]
+}
+```
+
+运行，输出
+
+```
+lang 在跳
+lang 在唱
+lang 在rap
+```
+
+## 2. 方法的定义
+
+方法的语法为
+
+```go
+func (t T) 方法名() {
+    
+}
+```
+
+你可以给任意类型定义方法
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+type MyInt int // [!code highlight]
+
+// 转换为string类型
+func (i MyInt) Output() string { // [!code highlight]
+	return fmt.Sprintf("%v", i)
+}
+```
+
+方法实际上是函数,上述方法等价于下列函数
+
+``` go title="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+type MyInt int
+
+// 转换为string类型
+func Output(i MyInt) string { // [!code highlight]
+	return fmt.Sprintf("%v", i)
+}
+```
+
+方法其实就是把函数参数移动到前面作为函数的接受者。
+
+方法的定义必须要与类型的定义在同一个包里，例如你不能给`int`类型创建方法，因为`int`类型的定义不在`main`包中：
+
+```go title="main.go"
+package main
+
+import (
+	"fmt"
+)
+
+// 编译期错误: cannot define new methods on non-local type int
+func (i int) Output() string { // [!code highlight]
+	return fmt.Sprintf("%v", i)
+}
+```
+
+但你可以给`int`起一个别名，给别名定义方法， 例如上一个例子。
+
+## 3. 值接受者和指针接受者:
+
+定义一个counter类型，它有一个值接收者的递增方法(increment)：
+
+```go title="main.go"
+package main
+import "fmt"
+
+// 给int起一个别名,新的类型counter
+type counter int 
+
+// 值接受者的方法，递增1
+func (c counter) increment() { // [!code highlight]
+	c = c + 1
+}
+
+func main() {
+	// 新建一个counter
+	c := counter(0)
+	// 调用递增的方法
+	c.increment()
+	// 打印c的值
+	fmt.Println(c)
+}
+```
+
+输出
+
+```
+0
+```
+
+为什么， 是0，而不是1呢?我们说过，方法其实就是函数
+
+```go
+func (c counter) increment() {
+	c = c + 1
+}
+```
+
+等价于
+
+```go
+func increment(c counter) {
+	c = c + 1
+}
+```
+
+Go中一切传递都是进行复制，索引`increment`函数中的c只是复制了传入的`0`，和`main`函数的`c`没有关系。
+
+我们把increment方法改为指针接收者，结果就会大不一样:
+
+```go title="main.go"
+package main
+import "fmt"
+
+// 给int起一个别名,新的类型counter
+type counter int
+
+// 指针接受者的方法，递增1
+func (c *counter) increment() { // [!code highlight]
+	*c = *c + 1 // 指针解引用，*c 取出指向的变量 // [!code highlight]
+}
+
+func main() {
+	// 新建一个counter
+	c := counter(0)
+	// 调用递增的方法
+	c.increment()
+	// 打印c的值
+	fmt.Println(c)
+}
+```
+
+输出
+
+```
+1
+```
+
+为什么呢？
+
+指针接受者的方法
+
+```go
+// 指针接受者的方法，递增1
+func (c *counter) increment() {
+	*c = *c + 1
+}
+```
+
+等价于
+
+```go
+func increment(c *counter) {
+	*c = *c + 1
+}
+```
+
+传入的是指针地址，复制的是指针地址，`main`函数中的`c`的地址存的值发送了改变，所以打印1。
+
+这就是指针接受者。当我们想改变`c`时，使用指针介绍者。或者当`c`内存占用很大时，我们使用指针接受者，减少函数传递时复制的开销，因为指针占用的内存永远是8个字节。
+
+## 4. 指针语法糖
+
+不知道你注意没有，`counter`调用指针接受者是这样的：
+
+```go title="main.go"
+...
+func main() {
+	// 新建一个counter
+	c := counter(0) // [!code highlight]
+	// 调用递增的方法
+	c.increment() // [!code highlight]
+	// 打印c的值
+	fmt.Println(c)
+}
+...
+```
+
+c 是`counter`类型，而不是`*counter`类型，为什么可以直接调用`increment`方法呢?
+
+```go
+func (c *counter) increment() {
+	*c = *c + 1
+}
+```
+
+这是Go提供的指针语法糖, Go会自动帮我们取地址：
+
+```go
+c.increment()
+```
+
+等价于
+
+```go
+(&c).increment()
+```
+
+这能简化我们的操作。
+
+同样，Go也会自动地解引用，考虑下列值接受者
+
+```go title="main.go"
+package main
+import "fmt"
+
+// 给int起一个别名,新的类型counter
+type counter int
+
+// 值接受者
+func (c counter) increment() { // [!code highlight]
+	c = c + 1 // [!code highlight]
+}
+
+func main() {
+	// 新建一个counter
+	temp := counter(0) // [!code highlight]
+    c := &temp // c: *counter类型 // [!code highlight]
+	// 调用递增的方法
+	c.increment() // [!code highlight]
+	// 打印c的值
+	fmt.Println(*c) // 解引用取出c指向的变量
+}
+```
+
+c是指针类型(*counter)的变量，`increment`是值接受者。
+
+```go
+// 调用递增的方法
+c.increment()
+```
+
+等价于
+
+```go
+(*c).increment()
+```
+
+Go帮我们自动解引用。
+
+聪明的你，上面的代码输出0还是1？
+
+运行，输出
+
+```
+0
+```
+
+为什么呢？因为`increment`传入的是值类型`counter`，而不是指针类型(*counter)。

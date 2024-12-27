@@ -13,12 +13,12 @@ import (
 	"os"
 )
 func main() {
-	f, err := os.Open("go.mod")
-	if err != nil {
-		panic(err)
+	f, err := os.Open("go.mod") // 打开一个文件
+	if err != nil { // 如果打开不成功 err != nil
+        os.Exit(1) // 直接终止程序，1表示非正常退出
 	}
 
-	defer f.Close() // 在main函数退出前执行。
+	defer f.Close() // 在main函数退出前执行。 // [!code highlight]
 
 	io.Copy(os.Stdout, f) // 输出到命令行
 }
@@ -84,7 +84,7 @@ func foo() {
 
 func main() {
 	foo()
-	fmt.Println("main")
+	fmt.Println("main") // [!code highlight]
 }
 ```
 
@@ -119,7 +119,7 @@ func foo() {
 		fmt.Println(3)
 	}()
 
-	panic("噢噢 坏事发生了!")
+	panic("噢噢 坏事发生了!") // 手动引发panic,终止程序 // [!code highlight]
 
 }
 
@@ -140,6 +140,70 @@ panic: 噢噢 坏事发生了!
 
 能输出3,2,1但打印不了`main`了，因为`panic`从`foo`函数传到上层的`main`函数，`main`函数就立刻退出了。
 
+<Callout title="panic是什么?">
+
+panic(恐慌)是一种意想不到的错误，或者是一种致命性的错误，程序必须终止。
+
+1. 例如除数为0的时候会panic:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	a := 0
+	b := 3 / a // 除数为0, panic // [!code highlight]
+	fmt.Println(b)
+}
+```
+
+输出panic
+```
+panic: runtime error: integer divide by zero
+```
+
+2. 索引越界panic
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+func main() {
+	ls := []int{1, 2}
+	fmt.Println(ls[3]) // 索引越界 // [!code highlight]
+}
+```
+
+输出panic:
+
+```
+panic: runtime error: index out of range [3] with length 2
+```
+
+3. 自定义panic
+
+```go title="main.go"
+package main
+
+func main() {
+	panic("坏事发送了...") // 手动panic // [!code highlight]
+}
+```
+
+输出panic:
+
+```
+panic: 坏事发送了...
+```
+
+`panic()`生成一个自定义`panic`， 可以传人任何类型的变量(说明引发panic的原因)。
+
+把panic当做恐慌吧，不要把`panic`作为错误处理，Go有自己的错误处理——`error`接口。只有意想不到，或者致命性的错误才使用`panic`。
+
+</Callout>
+
 在 defer 中使用`recover`捕获`panic`，使得程序继续运行(恢复)
 
 ```go title="main.go"
@@ -147,7 +211,7 @@ package main
 import "fmt"
 func foo() {
 	defer func() {
-		if r := recover(); r != nil {
+        if r := recover(); r != nil { // r 是any类型，实际上是字符串: "噢噢 坏事发生了!", 传入panic()的值 // // [!code highlight]
 			fmt.Println(r)
 		}
 	}()
@@ -164,7 +228,7 @@ func foo() {
 		fmt.Println(3)
 	}()
 
-	panic("噢噢 坏事发生了!")
+	panic("噢噢 坏事发生了!") // 手动panic，panic接收any类型,表明panic发送的原因 // [!code highlight]
 
 }
 
@@ -184,6 +248,8 @@ func main() {
 main
 ```
 
+使用`recover`后`main`成功打印。
+
 `foo`函数的`panic` 被`recover`捕获到了，没有继续传导到main函数，函数继续运行，打印`main`
 
 注意, `recover`必须在`defer` 语句中使用，因为`defer`在程序panic时仍会运行。
@@ -200,7 +266,7 @@ package main
 import "fmt"
 
 // 模拟文件打开和关闭
-func open(file string) (close func()) {
+func open(file string) (close func()) { // 返回一个close函数 // [!code highlight]
 	return func() {
 		fmt.Printf("%s 关闭成功\n", file)
 	}
@@ -209,7 +275,7 @@ func open(file string) (close func()) {
 func main() {
 	for i := range 5 {
 		close := open(fmt.Sprintf("%d文件", i))
-		defer close()
+		defer close() // [!code highlight]
 	}
 }
 ```
@@ -240,10 +306,10 @@ func open(file string) (close func()) {
 
 func main() {
 	for i := range 5 {
-		func() {
-			close := open(fmt.Sprintf("%d文件", i))
-			defer close()
-		}()
+		func() { // [!code highlight]
+			close := open(fmt.Sprintf("%d文件", i)) // [!code highlight]
+			defer close() // [!code highlight]
+		}() // [!code highlight]
 	}
 }
 ```
@@ -257,7 +323,7 @@ func main() {
 4文件 关闭成功
 ```
 
-每次循环结束匿名函数退出前触发`defer`语句。
+每次循环结束匿名函数退出前触发`defer`语句。记住，`defer`所在的函数退出前运行延迟函数。
 
 2. defer函数的参数在声明时就验证
 
@@ -268,11 +334,11 @@ import "fmt"
 
 func main() {
 	a := 1
-	defer func(num int) {
-		fmt.Println(num)
-	}(a)
+	defer func(num int) { // 参数num
+		fmt.Println(num) 
+	}(a) // 传入a 立即验证，此时 a = 1
 
-	a = 2
+	a = 2 
 }
 ```
 
@@ -295,9 +361,9 @@ import "fmt"
 
 func main() {
 	a := 1
-	defer func() {
-		fmt.Println(a)
-	}()
+	defer func() { // 没有参数 
+		fmt.Println(a) // 闭包，引用外部变量a
+	}() 
 
 	a = 2
 }
@@ -320,13 +386,13 @@ package main
 
 import "fmt"
 
-func bar() (num int) {
+func bar() (num int) { // 命名返回值num
 	defer func() {
-		num = 3
+		num = 3 // 闭包，把3赋值给外部变量num
 	}()
 
 	num = 1
-	return 2
+	return 2 // 等价有 num = 2
 }
 
 func main() {

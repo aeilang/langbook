@@ -1,3 +1,273 @@
 ---
 title: 10.接口
 ---
+
+Go是强类型的语言，有了接口带来了很大的灵活性。
+
+## 1. 接口的定义
+
+接口类型就是一系列方法的集合，莫类型只要实现了这些方法，就可以传给改接口。
+
+定义一个接口`rapper`,只要会唱(sing), 跳(dance)它就是一个`rappper`
+
+```go
+type rapper interface {
+    sing()
+    dance()
+}
+```
+
+我们创建一个类型，它有`sing`, `dance`的方法
+
+```go
+type person struct {
+	name string
+}
+
+func (p person) sing() {
+	fmt.Printf("%s 在唱\n", p.name)
+}
+
+func (p person) dance() {
+	fmt.Printf("%s 在跳\n", p.name)
+}
+```
+
+再创建一个函数，它接收`rapper`作为参数, 调用`rapper`的`sing`，`dance`方法
+
+```go
+func rap(r rapper) {
+	r.sing()
+	r.dance()
+}
+```
+
+我们可以常见一个`person`类型变量，把它传人`rap`函数，因为`person`已经实现了`rapper`接口的所有方法，可以把`person`叫做一个`rapper`
+
+```go
+func main() {
+	p := person{name: "lang"}
+	rap(p)
+}
+```
+
+完整代码:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type rapper interface {
+	sing()
+	dance()
+}
+
+type person struct {
+	name string
+}
+
+func (p person) sing() {
+	fmt.Printf("%s 在唱\n", p.name)
+}
+
+func (p person) dance() {
+	fmt.Printf("%s 在跳\n", p.name)
+}
+
+func rap(r rapper) {
+	r.sing()
+	r.dance()
+}
+
+func main() {
+	p := person{name: "lang"}
+	rap(p)
+}
+```
+
+运行，输出
+
+```
+lang 在唱
+lang 在跳
+```
+
+接口是隐性实现的，只要该类型实现了该接口的所有方法，就实现了该接口，可以赋值给该接口,不需要显示声明实现了该接口。
+
+```go
+func main() {
+    p := person{name: "lang"}
+    var r rapper = p // 赋值给r变量， r是rapper接口类型。 
+}
+```
+
+## 2. 为什么要有接口
+
+接口的最大作用是解耦代码。使依赖和实现分离。
+
+假设我有一个俱乐部`club`它需要一个`rapper`
+
+```go
+type club struct {
+	rap rapper // 需要一个rapper
+}
+```
+
+俱乐部会举办了一个演出，演出期间`rapper`会唱`sing`和跳`dance`m, 用一个`show`方法实现:
+
+```go
+func (c club) show() {
+	c.rap.sing() // rap 唱
+	c.rap.dance() // rap 跳
+}
+```
+
+好的，现在让club开起了, 使用`person`类型作为`rapper`
+
+```go
+func main() {
+	p := person{name: "lang"}
+	c := club{rap: p} // 新建一个club， 使用p做为rapper
+	c.show()          // 表演节目
+}
+```
+
+完整代码:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type club struct {
+	rap rapper // 需要一个rapper
+}
+
+func (c club) show() {
+	c.rap.sing()
+	c.rap.dance()
+}
+
+type rapper interface {
+	sing()
+	dance()
+}
+
+type person struct {
+	name string
+}
+
+func (p person) sing() {
+	fmt.Printf("%s 在唱\n", p.name)
+}
+
+func (p person) dance() {
+	fmt.Printf("%s 在跳\n", p.name)
+}
+
+func main() {
+	p := person{name: "lang"}
+	c := club{rap: p} // 新建一个club， 使用p做为rapper
+	c.show()          // 表演节目
+}
+```
+
+运行,输出
+
+```
+lang 在唱
+lang 在跳
+```
+
+到这里，还体现不出接口的好处。摄像一下，有一天`person`病了，来不了了，`club`办不了了怎么办?
+
+这时我们可以使用接口实现无缝切换到另一个`rapper`。
+
+实现另一个`rapper`, 一只猫也可以成为`rapper`:
+
+```go
+type cat struct {
+	name string
+}
+
+func (p cat) sing() {
+	fmt.Printf("%s 在喵喵\n", p.name)
+}
+
+func (p cat) dance() {
+	fmt.Printf("%s 在扭腰\n", p.name)
+}
+```
+
+好的，把`club`开起了
+
+```go
+func main() {
+	flowerCat := cat{name: "花猫"}
+	c := club{rap: flowerCat} // 新建一个club， 使用flowerCat做为rapper
+	c.show()                  // 表演节目
+}
+```
+
+完整代码:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+type club struct {
+	rap rapper // 需要一个rapper
+}
+
+func (c club) show() {
+	c.rap.sing()
+	c.rap.dance()
+}
+
+type rapper interface {
+	sing()
+	dance()
+}
+
+type person struct {
+	name string
+}
+
+func (p person) sing() {
+	fmt.Printf("%s 在唱\n", p.name)
+}
+
+func (p person) dance() {
+	fmt.Printf("%s 在跳\n", p.name)
+}
+
+type cat struct {
+	name string
+}
+
+func (p cat) sing() {
+	fmt.Printf("%s 在喵喵\n", p.name)
+}
+
+func (p cat) dance() {
+	fmt.Printf("%s 在扭腰\n", p.name)
+}
+
+func main() {
+	flowerCat := cat{name: "花猫"}
+	c := club{rap: flowerCat} // 新建一个club， 使用flowerCat做为rapper
+	c.show()                  // 表演节目
+}
+```
+
+运行，输出
+
+```
+花猫 在喵喵
+花猫 在扭腰
+```
+
+接口就是这样，让依赖和实现分离，你可以切换自如。把接口想象成你电脑的`USB`接口，只要形状一样，就可以插进来。这样一个可以同时支持键盘，鼠标，麦克风等功能。如果一个设备坏了，例如鼠标坏了，直接换另一个新的鼠标插入就好，不要拆开电脑换。
+
