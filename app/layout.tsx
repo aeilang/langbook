@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "lang books",
+  title: "langbook",
   description: "Go语言相关书籍，从入门到失业",
 };
 
