@@ -2,9 +2,9 @@
 title: 复合类型
 ---
 
-光有砖和瓦还不够，我们还需要墙、门、板这些模型，才能快速构建起我们的大楼。我们需要把基本类型组合起来，这就是复合类型。
+光有砖和瓦还不够，我们还需要墙、门、板这些模型，才能快速构建起我们的大楼。将基本类型组合起来，这就是复合类型。
 
-## 1. 结构体  [#struct]
+## 1. 结构体 [#struct]
 
 使用`struct`来定义一个结构体类型。结构体是多个相关属性的集合，比如，人有年龄, 体重这些属性。
 
@@ -17,7 +17,7 @@ type person struct {
 
 <Callout title="type 定义类型">
 
-你可以使用`type`关键件创建一个新的类型，例如给`int32`类型起一个别名。
+你可以使用`type`关键字创建一个新的类型，例如给`int32`类型起一个别名。
 
 ```go
 type myint int32
@@ -27,9 +27,69 @@ type myint int32
 
 </Callout>
 
-### 1.1 结构体进行比较“==”
+### 1.1 声明(创建)一个结构体
 
-结构体是可比较的，要求其字段都是可比的(不是切片，map, 函数类型)。同一个结构体类型才可比, 例如：
+1. 声明一个结构体，指定它各个字段的值:
+
+```go
+p1 := person{age: 1, height: 160} // p: {age: 1, height: 160}
+```
+
+2. 如果有的字段不指定，会赋予该字段零值:
+
+```go
+p1 := person{} // p: {age: 0, height: 0}
+```
+
+3. 也可以使用 var 声明:
+
+```go
+var p1 person 	  // 默认初始化为零值, p1: {age: 0, height: 0}
+var p2 = person{  // p2: {age: 1, height: 16}
+	age: 1,
+	height: 16
+}
+```
+
+4. 通过`.`来读取和修改结构体的字段
+
+```go title="main.go"
+package main
+import (
+	"fmt"
+)
+type person struct {
+	age    int32
+	height int32
+}
+func main() {
+	p := person{age: 18, height: 160}
+
+	// 读取
+	age := p.age // age = 18 // [!code highlight]
+	fmt.Println(age)
+
+	// 修改
+	p.age = 35 // [!code highlight]
+	fmt.Println(p) // {age: 35, height: 160}
+}
+```
+
+运行，输出
+
+```
+18
+{35 160}
+```
+
+### 1.2 结构体进行比较
+
+结构体是可比较的，要求:
+
+- 相同的结构体类型才能比较。
+- 其所有字段都是可比的(不是切片，map, 函数等引用类型)。
+
+比较的规则是，两个结构体的各个字段都相等，它们才相等。例如下列代码`p1 == p2`:
 
 ```go title="main.go"
 package main
@@ -42,8 +102,8 @@ type person struct {
 }
 
 func main() {
-	p1 := person{age: 11, height: 160}
-	p2 := person{age: 11, height: 160}
+	p1 := person{age: 11, height: 160} // [!code highlight]
+	p2 := person{age: 11, height: 160} // [!code highlight]
 	fmt.Println(p1 == p2)
 }
 ```
@@ -54,7 +114,7 @@ func main() {
 true
 ```
 
-### 1.2 结构体占多少内存? [#much]
+### 1.3 结构体占多少内存? [#much]
 
 ```go title="main.go"
 package main
@@ -74,100 +134,20 @@ func main() {
 		age:    18,
 		height: 160,
 	}
-	fmt.Println(unsafe.Sizeof(p))
+	fmt.Println(unsafe.Sizeof(p)) // 标准库unsafe包里的Sizeof函数返回p变量在内存中占多少字节
 }
 
 ```
 
-运行，输出(64位系统):
+运行，输出(64 位系统):
 
 ```
 8
 ```
 
-`person`结构体占用8个字节。我们知道`age` 和`height`是`int32类型`，都占4个字节， 加起来正好8个字节。
+`person`结构体占用 8 个字节。我们知道`age` 和`height`是`int32类型`，都占 4 个字节， 加起来正好 8 个字节。
 
 ![](@/public/images/struct1.svg)
-
-<Callout title="结构体怎么初始化">
-
-1. 当我们只声明结构体时，go自动赋予结构体零值。结构体的零值就是包含的字段的零值
-
-```go title="main.go"
-package main
-
-import (
-	"fmt"
-)
-
-type person struct {
-	age    int32
-	height int32
-}
-
-func main() {
-	var p person // [!code highlight]
-	fmt.Printf("%#v\n", p) // %#v 表示打印p变量的详细信息
-}
-```
-
-运行，输出
-
-```
-main.person{age:0, height:0}
-```
-
-2. 使用结构体字面量初始化
-
-```go
-p := person{
-		age:    18,
-		height: 160,
-}
-```
-
-`person{age: 18, height: 160}`就是结构体的字面量，以类型开头，大括号里写入各个字段的值。
-
-如果有的字段没有指明，就会赋予这个字段对应类型的零值：
-
-```go
-p := person{
-    age: 18
-} // p: person{age: 18, height: 0}
-```
-
-3. 读取和修改结果体的字段
-
-```go title="main.go"
-package main
-import (
-	"fmt"
-)
-type person struct {
-	age    int32
-	height int32
-}
-func main() {
-	p := person{age: 18, height: 160} 
-
-	// 读取
-	age := p.age // age = 18 // [!code highlight]
-	fmt.Println(age)
-
-	// 修改
-	p.age = 35 // [!code highlight]
-	fmt.Println(p) // {age: 35, height: 160}
-}
-```
-
-运行，输出
-
-```
-18
-{35 160}
-```
-
-</Callout>
 
 我们可以设想，不包含字段的结构体即 空结构体不占内存，验证一下
 
@@ -179,12 +159,12 @@ import (
 	"unsafe"
 )
 
-type empty struct { // 空结构体 
+type empty struct { // 空结构体 // [!code highlight]
 }
 
 func main() {
 	p := empty{}
-	fmt.Println(unsafe.Sizeof(p))
+	fmt.Println(unsafe.Sizeof(p)) // 打印p变量占多少字节的内存 // [!code highlight]
 }
 ```
 
@@ -196,11 +176,9 @@ func main() {
 
 果然，**空结构体不占内存！**， 这在并发编程传递取消信号时很有用，因为不占内存，就减少了复制开销。我们在传递取消信号时，不关心传递了什么类型的变量，只关心有东西传递过来了。
 
-### 1.2 结构体内存对齐规则  [#memo]
+### 1.4 结构体内存对齐规则 [#memo]
 
-**规则1**：
-
-如果把person结构体的`age`的类型改为`int8`, 结构体会占用多少内存呢? 根据上面的经验，应该占1+4=5 byte
+如果把 person 结构体的`age`的类型改为`int8`, 结构体会占用多少内存呢? 根据上面的经验，应该占 1+4=5 byte
 
 ```go title="main.go"
 package main
@@ -212,12 +190,12 @@ import (
 
 type person struct {
 	age    int8  // 1 byte // [!code highlight]
-	height int32 // 4 byte
+	height int32 // 4 byte // [!code highlight]
 }
 
 func main() {
 	p := person{age: 18, height: 160}
-	fmt.Println(unsafe.Sizeof(p))
+	fmt.Println(unsafe.Sizeof(p)) // 打印p变量占多少字节的内存 // [!code highlight]
 }
 ```
 
@@ -227,27 +205,33 @@ func main() {
 8
 ```
 
-然而更改后的结构体占8个字节，而不是5个字节。因为这里涉及到内存对齐，规则1: **整个结构体的大小必须是最大字段大小的整数倍。 这里的最大字段必须是基本类型(如整数，布尔， 浮点数等，不包括`string`)**
+然而更改后的结构体占 8 个字节，而不是 5 个字节。因为这里涉及到内存对齐。
 
-`person结构体`占内存最大的是`height`, 4 个字节，整体必须是4的倍数，又要加1个字节，所以是8个字节。 
+**规则 1**: **整个结构体的大小必须是其最大字段大小的整数倍。 这里的最大字段必须是基本类型(如整数，布尔， 浮点数等，不包括`string`)**
+
+`person结构体`占内存最大的是`height`, 4 个字节，整体必须是 4 的倍数，又要加 1 个字节，所以是 8 个字节。
 
 ![](@/public/images/uint.svg)
 
-**规则2：**
+**规则 2：**
 
 我们看两个有趣的现象，看看结构体的字段不同的排列方式如何影响占用内存:
 
 ![](@/public/images/two.png)
 
-这里引出规则2: **每个字段的起始位置必须是其类型大小的整数倍**。结构体内存对齐受到两个规则的约束，这启示我们，把占内存大的字段排在前面，（其实咋排都没关系，影响不大，我们知道原理就好。）
+按照`规则1`, `BadLayout`结构体应该占 8 的倍数，即 16 个字节，但实际上却占 24 个字节。
+
+原因是还有**规则 2:每个字段的起始位置必须是其类型大小的整数倍**。 `BadLayout`结构体中， `b`字段内存的起始位置必须是`8`的整数倍，即不能紧挨着`a`字段，需要填充 7 个字节，如上图。
+
+结构体内存对齐受到两个规则的约束，这启示我们，把占内存大的字段排在前面，（其实咋排都没关系，影响不大，我们知道原理就好。）
 
 ## 2. 数组 [#array]
 
-为什么会有数值类型？当我们需要一组顺序排序的元素，需要快速地读取和修改第几个元素时 (例如书架上的书)， 就需要用到数组类型。
+为什么会有数值类型？当我们需要一组有顺序的元素，同时能快速地读取和修改第几个元素时 (例如书架上的书)， 就需要用到数组类型。
 
-###  2.1 数组的定义
+### 2.1 数组的定义
 
-数组的类型是`[len]T`, len为数组的长度，T为包含元素的类型:
+1. 数组的类型是`[len]T`, len 为数组的长度，T 为包含元素的类型:
 
 ```go title="main.go"
 package main
@@ -267,19 +251,19 @@ func main() {
 [1 2 3 4 5]
 ```
 
-也可以省略长度，用`...`代替，go会帮我们自动推断出长度
-
-```go
-arr := [5]int{1, 2, 3, 4, 5}
-```
-
-等价于
+2. 也可以省略长度，用`...`代替，go 会帮我们自动推断出长度
 
 ```go
 arr := [...]int{1, 2, 3, 4, 5}
 ```
 
-声明空数组会默认初始化为它的零值
+等价于
+
+```go
+arr := [5]int{1, 2, 3, 4, 5}
+```
+
+3. 声明空数组会默认初始化为它的零值
 
 ```go title="main.go"
 package main
@@ -300,16 +284,18 @@ func main() {
 
 ### 2.2 数组的读取和修改
 
+使用`arr[索引]`的方式读取和修改数组的元素。
+
 ```go title="main.go"
 package main
 
 import "fmt"
 
 func main() {
-	arr := [5]int{1, 2, 3, 4, 5} 
+	arr := [5]int{1, 2, 3, 4, 5}
     a1 := arr[0] // a1 = 1, 读取第一个元素 // [!code highlight]
 	fmt.Println(a1)
-    
+
     arr[0] = 9 // 修改arr的第一个元素为9 // [!code highlight]
     fmt.Println(arr)
 }
@@ -323,6 +309,8 @@ func main() {
 ```
 
 ### 2.3 数组的索引越界
+
+假设数组的长度是`len`, 那么它的第一个元素的索引是 0, 最后一个元素的索引是`len-1`; 如果索引不在[0, len-1]这个范围,就会发生索引越界的错误。 ,如下图:
 
 ```go title="main.go"
 package main
@@ -346,6 +334,8 @@ index 5 out of bounds
 
 ### 2.4 数组的长度是其类型的一部分
 
+下面将`[2]int`类型的数组`arr2` 赋值给`[5]int`类型的数组`arr`，会发送编译期错误，因为这两个不是相同的类型(虽然都是`int`类型的数组，但是长度不同)。
+
 ```go title="main.go"
 package main
 
@@ -353,13 +343,13 @@ import "fmt"
 
 func main() {
 	var arr [5]int
-	arr2 := [2]int{1, 2} 
+	arr2 := [2]int{1, 2}
 	arr = arr2 // 不同长度的数组是不同的类型 // [!code highlight]
 	fmt.Println(arr)
 }
 ```
 
-运行，编译期panic:
+运行，编译期 panic:
 
 ```
 cannot use arr2 (variable of type [2]int) as [5]int value in assignment
@@ -377,7 +367,7 @@ import (
 
 func main() {
 	arr := [5]int{1, 2, 3, 4, 5}
-	fmt.Println(unsafe.Sizeof(arr))
+	fmt.Println(unsafe.Sizeof(arr)) // 打印arr变量占多少字节的内存 // [!code highlight]
 }
 
 ```
@@ -388,21 +378,21 @@ func main() {
 40
 ```
 
-每个int类型占8个字节，一共有5个，5*8=40 个字节。数组在内存中是连续分布的，方便根据索引来快速访问和修改元素。
+每个 int 类型占 8 个字节，一共有 5 个，共占 5\*8=40 个字节。数组在内存中是连续分布的，方便根据索引来快速访问和修改元素。
 
 ![](@/public/images/arr2.svg)
 
-所以数组占用内存 = 元素占用的内存 * 数组长度。
+所以数组占用内存 = 元素占用的内存 \* 数组长度。
 
 ## 3. 切片 [#slice]
 
-有意思的部分来了。因为数组的长度就是它类型的一部分，我们不能增加和删除元素，所以Go创造了切片。我们使用最多的就是切片，而不是数组。
+有意思的部分来了。因为数组的长度就是它类型的一部分，我们不能增加和删除元素，所以 Go 在数组的基础上 创造了切片。我们使用最多的就是切片，而不是数组。
 
 ### 3.1 切片的定义
 
-切片的类型是`[]T`， T可以是任何类型。和数组不同，切片的长度不是类型的一部分。
+切片的类型是`[]T`， T 可以是任何类型。和数组不同，切片的长度不是类型的一部分。
 
-- 声明一个切片但没初始化，go会赋予它的零值，`nil`。`nil`就是没有的意思。
+- 声明一个切片但没初始化，go 会赋予切片的零值 `nil`， `nil`就是没有的意思。
 
 ```go title="main.go"
 package main
@@ -410,7 +400,7 @@ package main
 import "fmt"
 
 func main() {
-	var s []int // [!code highlight]
+	var s []int // s = nil // [!code highlight]
 	fmt.Println(s == nil)
 }
 ```
@@ -444,7 +434,7 @@ func main() {
 3
 ```
 
-`[]int{1, 2, 3}`就是切片的字面量，它定义了切片的类型和包含的元素。
+`[]int{1, 2, 3}`就是切片的字面量，它定义了切片的类型和包含的元素。切片有两个属性，长度和容量。长度就是切片的元素的个数，容量是切片的底层数组的长度。
 
 - 使用`make([]T, len, cap)`声明并初始化
 
@@ -455,7 +445,7 @@ import "fmt"
 
 func main() {
 	// 创建一个长度为2，容量为4的[]int类型的切片
-	s := make([]int, 2, 4)
+	s := make([]int, 2, 4) // [!code highlight]
 	fmt.Println(s) // [0, 0]
 	fmt.Println(len(s)) // len(s) 返回切片的长度 2
 	fmt.Println(cap(s)) // cap(s) 返回切片的容量 4
@@ -498,9 +488,9 @@ func main() {
 
 切片的读取、修改和索引越界与数组相同，这里不再赘述。（切片的底层就是数组）
 
-### 3.2 增加和删除元素
+### 3.2 增加元素
 
-- 使用`append`函数增加
+1. `append`函数接收切片和要添加的元素，返回添加后的新切片。
 
 ```go title="main.go"
 package main
@@ -512,91 +502,20 @@ import (
 func main() {
 	// 定义一个长度为0的空切片
 	s := make([]int, 0)
-	fmt.Printf("开始s：, len=%d, cap=%d\n", len(s), cap(s)) // %d打印整数。
-
-    // 依次增加10个元素，i从0到9
-	for i := range 10 {
-		s = append(s, i)
-		fmt.Printf("增加第%d个元素： len=%d, cap=%d\n", i+1, len(s), cap(s))
-	}
+    fmt.Println(s) 	 // 打印增加前的切片
+    s = append(s, 1) // 在切片尾部增加元素1 // [!code highlight]
+    fmt.Println(s) 	 // 打印增加后的切片
 }
 ```
 
-输出
+运行，输出
 
 ```
-开始s：, len=0, cap=0
-增加第1个元素： len=1, cap=1
-增加第2个元素： len=2, cap=2
-增加第3个元素： len=3, cap=4
-增加第4个元素： len=4, cap=4
-增加第5个元素： len=5, cap=8
-增加第6个元素： len=6, cap=8
-增加第7个元素： len=7, cap=8
-增加第8个元素： len=8, cap=8
-增加第9个元素： len=9, cap=16
-增加第10个元素： len=10, cap=16
+[]
+[1]
 ```
 
-
-
-<Callout title="切片扩容策略">
-
-对应扩容前的切片(`ls`), 设
-
-- 它的长度`len0 = len(ls)`
-
-- 容量`cap0 = cap(ls)`
-- `append()`函数要添加的元素个数为`n`
-
-| 切片的容量 | 扩容后的长度               |
-| ---------- | -------------------------- |
-| 小于256    | `max(len0+n, 2 * cap0) `   |
-| 中间地带   | `2*cap0 -> 1.25*cap0` 过渡 |
-| 大容量数组 | 约等于 `1.25*cap0`         |
-
-简单来说，小容量切片扩容容量翻倍，大容量切片扩容容量翻1.25倍。中间地带是平滑过渡的曲线。有`runtime`包为证:
-
-```go title="runtime/slice.go"
-// nextslicecap 计算下一个适当的切片长度。
-func nextslicecap(newLen, oldCap int) int {
-    newcap := oldCap
-    doublecap := newcap + newcap
-    if newLen > doublecap {
-        return newLen
-    }
-
-    const threshold = 256
-    if oldCap < threshold {
-        return doublecap
-    }
-    for {
-        // 从小切片的2倍增长过渡到大切片的1.25倍增长。
-        // 这个公式在两者之间提供了一个平滑的过渡。
-        newcap += (newcap + 3*threshold) >> 2
-
-        // 我们需要检查 `newcap >= newLen` 以及 `newcap` 是否溢出。
-        // newLen 保证大于零，因此当 newcap 溢出时，
-        // `uint(newcap) > uint(newLen)` 。
-        // 这使得我们可以通过相同的比较来检查这两者。
-        if uint(newcap) >= uint(newLen) {
-            break
-        }
-    }
-
-    // 当 newcap 计算溢出时，设置 newcap 为请求的 cap 值。
-    if newcap <= 0 {
-        return newLen
-    }
-    return newcap
-}
-```
-
-为什么要设置这样的扩容策略？切片的底层是数组，每次扩容都要新建一个数组，把旧的数组复制到新的数组，所以要尽量扩容大一些。但当容量很大时，扩容两倍的数组又很浪费空间，所以扩容1.25倍。
-
-</Callout>
-
-你可以一次性增加多个元素:
+2. 你可以一次性增加多个元素:
 
 ```go title="main.go"
 package main
@@ -616,9 +535,9 @@ func main() {
 [1 2 3 4 5 6]
 ```
 
-记得把`append`返回的切片赋值给原切片`ls`
+记得把`append`返回的新切片赋值给原切片`ls`
 
-也可以把一个切片的元素添加到另一个切片，使用`...`操作符解开
+3. 也可以把一个切片的元素添加到另一个切片，使用`...`操作符解开
 
 ```go title="main.go"
 package main
@@ -656,8 +575,8 @@ func main() {
 	ls1 := []int{1, 2, 3}
 	ls2 := []int{}
 
-	fmt.Println(unsafe.Sizeof(ls1)) 
-	fmt.Println(unsafe.Sizeof(ls2)) 
+	fmt.Println(unsafe.Sizeof(ls1)) // [!code highlight]
+	fmt.Println(unsafe.Sizeof(ls2)) // [!code highlight]
 }
 ```
 
@@ -672,11 +591,17 @@ func main() {
 
 ```go title="runtime/slice.go"
 type slice struct {
-	array unsafe.Pointer // 指针: 8 byte， 指向底层数组 
+	array unsafe.Pointer // 指针: 8 byte， 指向底层数组
 	len   int            // 8byte
 	cap   int            // 8byte
 }
 ```
+
+切片是一个结构体，有三个字段:
+
+- array: 是一个指针，存储底层数组的内存地址，即指向底层数组。
+- len: 切片的长度，即切片的元素的个数。
+- cap: 切片的容量，即切片的底层数组的长度。
 
 根据结构体内存对齐的规则，切片就占`8+8+8=24`个字节。
 
@@ -690,96 +615,101 @@ ls := []int8{1,2,3}
 
 ![](@/public/images/s1.svg)
 
-### 3.4 切片的常见错误
+### 3.4 切片的扩容策略
 
-思考一个问题，下面的切片`ls`会改变吗
+使用`append`函数每次添加一个元素，添加完后打印新切片的长度和容量。
 
 ```go title="main.go"
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
-func x2(ls []int) {
-	for i, v := range ls { // i 是ls 的索引，v 是ls的值
-		ls[i] = v * 2 
+func main() {
+	// 定义一个长度为0的空切片
+	s := make([]int, 0)
+	fmt.Printf("开始s： len=%d, cap=%d\n", len(s), cap(s)) // %d打印整数。
+
+    // 依次增加10个元素，i从0到9
+	for i := range 10 {
+		s = append(s, i) // [!code highlight]
+		fmt.Printf("增加第%d个元素： len=%d, cap=%d\n", i+1, len(s), cap(s))
 	}
 }
-
-func main() {
-	ls := []int{1, 2, 3}
-	x2(ls)
-	fmt.Println(ls)
-}
-```
-
-我们将`ls`传入`x2`函数，这个函数作用是将`ls`的每个元素乘2。
-
-运行， 输出
-
-```
-[2 4 6]
-```
-
-ls改变了，为什么会改变呢，我们并没有传入`ls`的指针`*[]int`呀。原因是切片的实现就包含有指针指向底层数组。我们知道，Go中一切传输都是进行复制:
-
-![](@/public/images/s2.svg)
-
-聪明的你，下面的`ls`会改变吗?
-
-```go title="main.go"
-package main
-
-import "fmt"
-
-func add(ls []int) {
-	ls = append(ls, 4)
-}
-
-func main() {
-	ls := []int{1, 2, 3}
-	add(ls) 
-	fmt.Println(ls)
-}
 ```
 
 输出
 
 ```
-[1 2 3]
+开始s： len=0, cap=0
+增加第1个元素： len=1, cap=1
+增加第2个元素： len=2, cap=2
+增加第3个元素： len=3, cap=4
+增加第4个元素： len=4, cap=4
+增加第5个元素： len=5, cap=8
+增加第6个元素： len=6, cap=8
+增加第7个元素： len=7, cap=8
+增加第8个元素： len=8, cap=8
+增加第9个元素： len=9, cap=16
+增加第10个元素： len=10, cap=16
 ```
 
-为什么ls 不会改变呢。首先`append`函数会先判断`ls`底层还有没有足够的容量来存`4`。显然是没有的，因为`ls`的长度和容量都是`3`。那么`append`就会新建一个底层数组，如图：
+**可以发现，`append`函数会首先检查切片的容量是不是还够放进去一个元素，如果不够放，就进行扩容，每次容量都是扩大两倍。**
 
-![](@/public/images/s3.svg)
+切片的扩容策略是怎样的呢？
 
-底层数组没有改变，所以main函数里的`ls`不会改变。
+对应扩容前的切片(`ls`), 设
 
-为了使外面的`ls`改变，我们让`add`函数返回`ls`即可，像`append`函数一样:
+- 它的长度`len0 = len(ls)`
 
-```go title="main.go"
-package main
+- 容量`cap0 = cap(ls)`
+- `append()`函数要添加的元素个数为`n`
 
-import "fmt"
+| 扩容前切片的容量 | 扩容后切片的容量           |
+| ---------------- | -------------------------- |
+| 小于 256         | `max(len0+n, 2 * cap0) `   |
+| 中间地带         | `2*cap0 -> 1.25*cap0` 过渡 |
+| 大容量数组       | 约等于 `1.25*cap0`         |
 
-func add(ls []int) []int { // [!code highlight]
-	ls = append(ls, 4)
-    return ls // [!code highlight]
+简单来说，小容量切片扩容容量翻倍，大容量切片扩容容量翻 1.25 倍。中间地带是平滑过渡的曲线。有`runtime`包为证:
+
+```go title="runtime/slice.go"
+// nextslicecap 计算下一个适当的切片长度。
+func nextslicecap(newLen, oldCap int) int {
+    newcap := oldCap
+    doublecap := newcap + newcap
+    if newLen > doublecap {
+        return newLen
+    }
+
+    const threshold = 256
+    if oldCap < threshold {
+        return doublecap
+    }
+    for {
+        // 从小切片的2倍增长过渡到大切片的1.25倍增长。
+        // 这个公式在两者之间提供了一个平滑的过渡。
+        newcap += (newcap + 3*threshold) >> 2
+
+        // 我们需要检查 `newcap >= newLen` 以及 `newcap` 是否溢出。
+        // newLen 保证大于零，因此当 newcap 溢出时，
+        // `uint(newcap) > uint(newLen)` 。
+        // 这使得我们可以通过相同的比较来检查这两者。
+        if uint(newcap) >= uint(newLen) {
+            break
+        }
+    }
+
+    // 当 newcap 计算溢出时，设置 newcap 为请求的 cap 值。
+    if newcap <= 0 {
+        return newLen
+    }
+    return newcap
 }
-
-func main() {
-	ls := []int{1, 2, 3}
-	ls = add(ls) // [!code highlight]
-	fmt.Println(ls)
-}
 ```
 
-输出
-
-```
-[1 2 3 4]
-```
-
-将接片作为参数传入函数要特别小心，函数有没有`append`操作，如果有，切片是否有足够的容量来存放新的切片。如果没有，那么`append`会进行扩容，返回一个新的切片，外面的切片就不会改变。
+为什么要设置这样的扩容策略？切片的底层是数组，每次扩容都要新建一个数组，把旧的数组复制到新的数组，所以要尽量扩容大一些。但当容量很大时，扩容两倍的数组又很浪费空间，所以扩容 1.25 倍。
 
 ### 3.5 子切片
 
@@ -804,6 +734,100 @@ ls2 := array[1:3]
 ![](@/public/images/ls2.svg)
 
 子切片的长度 = `end-start`, 容量 = `底层数组容量-start`
+
+### 3.6 切片的常见错误
+
+思考一个问题，下面的切片`ls`会改变吗
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+// x2 将传进来的切片元素都乘2
+func x2(ls []int) {
+	for i, v := range ls { // i 是ls 的索引，v 是ls的值
+		ls[i] = v * 2      // 每个元素乘2。
+	}
+}
+
+func main() {
+	ls := []int{1, 2, 3}
+	x2(ls)
+	fmt.Println(ls)
+}
+```
+
+我们将`ls`传入`x2`函数，这个函数作用是将`ls`的每个元素乘 2。
+
+运行， 输出
+
+```
+[2 4 6]
+```
+
+ls 改变了，为什么会改变呢，我们并没有传入`ls`的指针`*[]int`呀。原因是切片的实现就包含有指针指向底层数组。我们知道，Go 中一切传输都是进行复制:
+
+![](@/public/images/s2.svg)
+
+聪明的你，下面的`ls`会改变吗?
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+// add 在传入的切片中增加一个元素4
+func add(ls []int) {
+	ls = append(ls, 4) // [!code highlight]
+}
+
+func main() {
+	ls := []int{1, 2, 3}
+	add(ls) // [!code highlight]
+	fmt.Println(ls)
+}
+```
+
+输出
+
+```
+[1 2 3]
+```
+
+为什么 ls 不会改变呢。首先`append`函数会先判断`ls`底层还有没有足够的容量来存`4`。显然是没有的，因为`ls`的长度和容量都是`3`。那么`append`就会新建一个底层数组，如图：
+
+![](@/public/images/s3.svg)
+
+底层数组没有改变，所以 main 函数里的`ls`不会改变。
+
+为了使外面的`ls`改变，我们让`add`函数返回`ls`即可，像`append`函数一样:
+
+```go title="main.go"
+package main
+
+import "fmt"
+
+// add 把增加后的切片返回
+func add(ls []int) []int { // [!code highlight]
+	ls = append(ls, 4)
+    return ls // [!code highlight]
+}
+
+func main() {
+	ls := []int{1, 2, 3}
+	ls = add(ls) // [!code highlight]
+	fmt.Println(ls)
+}
+```
+
+输出
+
+```
+[1 2 3 4]
+```
+
+将接片作为参数传入函数要特别小心，函数有没有`append`操作，如果有，切片是否有足够的容量来存放新的切片。如果没有，那么`append`会进行扩容，返回一个新的切片，外面的切片就不会改变。
 
 ## 4. 字符串 [#string]
 
@@ -835,7 +859,7 @@ func main() {
 16
 ```
 
-我们发现，所以的`string`都占16个字节，为什么呢？我们来看它的实现:
+我们发现，所以的`string`都占 16 个字节，为什么呢？我们来看它的实现:
 
 ```go
 type string struct {
@@ -844,7 +868,7 @@ type string struct {
 }
 ```
 
-string是一个结构体，根据结构体内存对齐的规则，它占`8+8=16`个字节。
+string 是一个结构体，根据结构体内存对齐的规则，它占`8+8=16`个字节。
 
 已下面的`str`为例:
 
@@ -856,7 +880,7 @@ str := "hello"
 
 ![](@/public/images/str1.svg)
 
-和切片不同的是,`string`是没有容量的。为什么呢，Go在设计时就让`string`不能变:
+和切片不同的是,`string`是没有容量的。为什么呢，Go 在设计时就让`string`不能变:
 
 ```go title="main.go"
 package main
@@ -872,7 +896,7 @@ func main() {
 }
 ```
 
-输出，编译期错误panic:
+输出，编译期错误 panic:
 
 ```
 cannot assign to str[0] (neither addressable nor a map index expression
@@ -905,7 +929,7 @@ func main() {
 
 最后的重头戏`map`来了， `map`就像和切片一样。切片可以根据索引拿出值，而`map`更强大，可以通过自定义的键拿出对应的值。
 
-### 5.1 map的声明
+### 5.1 map 的声明
 
 - 通过`make`创建一个`map`
 
@@ -947,8 +971,6 @@ m1 = m2 // 编译期报错， m1和m2是不同的类型。
 | `接口类型`                                   |                                                |
 | `结构体类型，但其字段必须全部为可比较的类型` |                                                |
 | `指针类型`                                   |                                                |
-
-
 
 </Callout>
 
@@ -1001,7 +1023,7 @@ func main() {
 
 可以在初始化时就指明`map`中的键值对。
 
-### 5.2 如何判断一个key在不在map中
+### 5.2 如何判断一个 key 在不在 map 中
 
 我们传入一个不在`map`中的`key`，看看会发送什么
 
@@ -1049,7 +1071,7 @@ func main() {
 val = 0, ok = false
 ```
 
-### 5.3 for-range循环map
+### 5.3 for-range 循环 map
 
 ```go title="main.go"
 package main
@@ -1079,7 +1101,7 @@ key: k2, val: v2
 
 注意，**`map`中键值对是无序的，每次循环时键值对的顺序都不同。**
 
-for-range循环中也可以缺省值`v`， 只需要键`k`
+for-range 循环中也可以缺省值`v`， 只需要键`k`
 
 ```go title="main.go"
 package main
@@ -1107,7 +1129,7 @@ key: k3
 key: k1
 ```
 
-### 5.4 map占多少内存
+### 5.4 map 占多少内存
 
 ```go title="main.go"
 package main
@@ -1135,4 +1157,4 @@ func main() {
 8
 ```
 
-可以发现，所有的`map`类型的变量都占8个字节。该变量本质上是一个指针，指向底层的`hmap`, `hmap`存放实际的键值对数据。
+可以发现，所有的`map`类型的变量都占 8 个字节。该变量本质上是一个指针，指向底层的`hmap`, `hmap`存放实际的键值对数据。
